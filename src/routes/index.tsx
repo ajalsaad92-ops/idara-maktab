@@ -1,29 +1,47 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { AuthProvider, useAuth } from "@/lib/auth";
+import { I18nProvider } from "@/lib/i18n";
+import { LoginPage } from "@/components/auth/LoginPage";
+import { AppShell } from "@/components/AppShell";
+import { EmployeeDashboard } from "@/components/employee/EmployeeDashboard";
+import { ManagerDashboard } from "@/components/manager/ManagerDashboard";
+import { Toaster } from "@/components/ui/sonner";
 
 export const Route = createFileRoute("/")({
+  ssr: false,
   head: () => ({
     meta: [
-      { title: "Your App" },
-      { name: "description", content: "Replace this with a one-sentence description of your app." },
-      { property: "og:title", content: "Your App" },
-      { property: "og:description", content: "Replace this with a one-sentence description of your app." },
+      { title: "ديوان المحافظة — نظام إدارة الموظفين والمهام" },
+      { name: "description", content: "Bilingual employee attendance and task management system." },
     ],
   }),
-  component: Index,
+  component: Page,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+function Page() {
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
+    <I18nProvider>
+      <AuthProvider>
+        <Toaster richColors position="top-center" />
+        <Gate />
+      </AuthProvider>
+    </I18nProvider>
+  );
+}
+
+function Gate() {
+  const { user, loading, role } = useAuth();
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-muted-foreground">…</p>
+      </div>
+    );
+  }
+  if (!user) return <LoginPage />;
+  return (
+    <AppShell>
+      {role === "employee" ? <EmployeeDashboard /> : <ManagerDashboard />}
+    </AppShell>
   );
 }
