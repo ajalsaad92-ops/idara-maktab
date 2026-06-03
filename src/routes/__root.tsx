@@ -77,14 +77,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "MURAQEB" },
+      { name: "description", content: "Diwan Flow is a bilingual employee management and task tracking web application." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "MURAQEB" },
+      { property: "og:description", content: "Diwan Flow is a bilingual employee management and task tracking web application." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "MURAQEB" },
+      { name: "twitter:description", content: "Diwan Flow is a bilingual employee management and task tracking web application." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/15ba5b96-7d15-47b1-9f8d-fb986ab9d378/id-preview-9f2cdcac--409e1bd1-f7ab-4e99-a0b9-b22c58fd986b.lovable.app-1780522380948.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/15ba5b96-7d15-47b1-9f8d-fb986ab9d378/id-preview-9f2cdcac--409e1bd1-f7ab-4e99-a0b9-b22c58fd986b.lovable.app-1780522380948.png" },
     ],
     links: [
       {
