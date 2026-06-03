@@ -85,7 +85,7 @@ export function TaskDialog({ taskId, onClose }: { taskId: string; onClose: () =>
 
   const updateStatus = async () => {
     setBusy(true);
-    const { error } = await supabase.from("tasks").update({ status: newStatus }).eq("id", taskId);
+    const { error } = await supabase.from("tasks").update({ status: newStatus as any }).eq("id", taskId);
     setBusy(false);
     if (error) return toast.error(error.message);
     toast.success(t("update_status"));
