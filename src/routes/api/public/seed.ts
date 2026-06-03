@@ -97,7 +97,7 @@ export const Route = createFileRoute("/api/public/seed")({
           { title: "إعداد جدول أعمال الاجتماع", type: "writing", priority: "important", status: "new" },
           { title: "مراسلة الدوائر الحكومية", type: "correspondence", priority: "normal", status: "in_progress" },
           { title: "تنظيم ملفات الموظفين", type: "other", priority: "normal", status: "new" },
-        ];
+        ] as const;
         const future = (days: number) => {
           const d = new Date();
           d.setDate(d.getDate() + days);
