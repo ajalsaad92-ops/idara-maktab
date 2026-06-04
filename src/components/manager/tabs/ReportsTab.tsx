@@ -24,7 +24,7 @@ function ReportsTab({ productivity }: any) {
             month={new Date().toLocaleString("ar-IQ", { month: "long" })}
             year={new Date().getFullYear().toString()}
             managerName="المدير"
-            institutionName="ديوان المحافظة"
+            institutionName="المراقب"
           />
           <Button variant="outline" size="sm" onClick={() => window.print()}>
             <Printer className="h-4 w-4 me-1" /> {t("print")}

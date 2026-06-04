@@ -27,7 +27,7 @@ export const Route = createFileRoute("/")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "ديوان المحافظة — نظام إدارة الموظفين والمهام" },
+      { title: "المراقب — نظام إدارة الموظفين والمهام" },
       { name: "description", content: "Bilingual employee attendance and task management system." },
     ],
   }),
