@@ -87,14 +87,16 @@ export function EmployeeDashboard() {
     queryKey: ["pending_exit_request", user?.id],
     queryFn: async () => {
       if (!user) return null;
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
+      const now = new Date();
+      const baghdadOffset = 3 * 60;
+      const baghdadNow = new Date(now.getTime() + (baghdadOffset + now.getTimezoneOffset()) * 60000);
+      const todayStr = baghdadNow.toISOString().split("T")[0];
       const { data } = await (supabase as any)
         .from("exit_requests")
         .select("id, status, reason_type")
         .eq("employee_id", user.id)
         .eq("status", "pending")
-        .gte("requested_at", startOfDay.toISOString())
+        .gte("requested_at", todayStr + "T00:00:00+03:00")
         .order("requested_at", { ascending: false })
         .limit(1);
       return data?.[0] ?? null;
@@ -127,15 +129,17 @@ export function EmployeeDashboard() {
     queryKey: ["employeeDashboard", user?.id],
     queryFn: async () => {
       if (!user) return { today: [], tasks: [] };
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
+      const now = new Date();
+      const baghdadOffset = 3 * 60;
+      const baghdadNow = new Date(now.getTime() + (baghdadOffset + now.getTimezoneOffset()) * 60000);
+      const todayStr = baghdadNow.toISOString().split("T")[0];
 
       const [att, tks] = await Promise.all([
         supabase
           .from("attendance")
           .select("*")
           .eq("user_id", user.id)
-          .gte("event_at", startOfDay.toISOString())
+          .eq("event_date", todayStr)
           .order("event_at", { ascending: true }),
         supabase
           .from("task_assignments")
@@ -143,10 +147,21 @@ export function EmployeeDashboard() {
           .eq("user_id", user.id)
           .eq("is_active", true)
       ]);
-      const activeTasks = (tks.data ?? [])
+      if (tks.error) console.error("Tasks query error:", tks.error);
+      let activeTasks = (tks.data ?? [])
         .map((a: any) => a.tasks)
         .filter(Boolean)
-        .filter((tk: any) => tk.status !== "مكتملة" && tk.status !== "مؤرشفة" && tk.status !== "completed" && tk.status !== "archived");
+        .filter((tk: any) => tk.status !== "completed" && tk.status !== "archived");
+      // Fallback: if tasks came back empty due to RLS blocking the join, fetch directly
+      if (activeTasks.length === 0 && (tks.data ?? []).length > 0) {
+        const taskIds = (tks.data ?? []).map((a: any) => a.task_id);
+        const { data: directTasks } = await supabase
+          .from("tasks")
+          .select("id, title, type, status, priority, deadline, description, created_at")
+          .in("id", taskIds)
+          .not("status", "in", '("completed","archived")');
+        activeTasks = directTasks ?? [];
+      }
       return { today: att.data ?? [], tasks: activeTasks };
     },
     enabled: !!user,
@@ -244,11 +259,18 @@ export function EmployeeDashboard() {
     : 0;
   const showReminder = lastOutDuration > 2;
 
-  const completedToday = tasks.filter((tk: any) => tk.status === "مكتملة" || tk.status === "completed").length;
+  const completedToday = tasks.filter((tk: any) => tk.status === "completed").length;
   const pendingCount = tasks.filter((tk: any) => {
     const s = tk.status;
-    return s !== "مكتملة" && s !== "completed" && s !== "مؤرشفة" && s !== "archived";
+    return s !== "completed" && s !== "archived";
   }).length;
+
+  const getDeadlineStatus = (deadline: string) => {
+    const diff = new Date(deadline).getTime() - Date.now();
+    if (diff < 0) return { label: `تأخر بـ ${Math.floor(-diff / 3600000)} ساعة`, color: "text-danger" };
+    if (diff < 86400000) return { label: `يتبقى ${Math.floor(diff / 3600000)} ساعة`, color: "text-warning" };
+    return { label: `يتبقى ${Math.floor(diff / 86400000)} يوم`, color: "text-muted-foreground" };
+  };
 
   if (isLoading) {
     return <EmployeeDashboardSkeleton />;
@@ -403,7 +425,8 @@ export function EmployeeDashboard() {
                       <PriorityBadge priority={tk.priority} />
                       {tk.deadline && (
                         <Badge variant="secondary" className="text-xs">
-                          {t("deadline")}: {tk.deadline}
+                          {t("deadline")}: {new Date(tk.deadline).toLocaleString("ar-IQ", { timeZone: "Asia/Baghdad", year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                          <span className={`ms-1 ${getDeadlineStatus(tk.deadline).color}`}>{getDeadlineStatus(tk.deadline).label}</span>
                         </Badge>
                       )}
                     </div>

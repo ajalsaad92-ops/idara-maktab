@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Building2, LogOut, Globe } from "lucide-react";
 import { NotificationsBell } from "@/components/NotificationsBell";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "./layout/AppSidebar";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "@tanstack/react-router";
@@ -28,7 +28,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     <EmployeeDrawerProvider>
       <SidebarProvider>
         <AppSidebar />
-        <div className={`flex-1 flex flex-col min-h-screen bg-surface relative overflow-hidden ${isRTL ? 'md:mr-64' : 'md:ml-64'}`}>
+        <SidebarInset className="flex flex-col min-h-screen bg-surface">
           {/* Header */}
           <header className="sticky top-0 z-10 w-full h-16 bg-white border-b border-border shadow-sm flex items-center justify-between px-4 sm:px-6 shrink-0">
             <div className="flex items-center gap-3">
@@ -96,7 +96,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               </motion.div>
             </AnimatePresence>
           </main>
-        </div>
+        </SidebarInset>
         <EmployeeDetailDrawer />
         <MobileBottomNav />
         <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />

@@ -77,6 +77,7 @@ export function CreateTaskDialog({ open, onOpenChange, onCreated }: { open: bool
       type: "task_assigned",
       message: `مهمة جديدة: ${title}`,
       related_task_id: task.id,
+      link_data: { route: "/tasks", task_id: task.id } as any,
     });
     if (notifError) {
       console.error("Notification error:", notifError);

@@ -24,7 +24,7 @@ export function ExitRequestsPage() {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("exit_requests")
-        .select("*, profiles:employee_id (full_name, role)")
+        .select("*, profiles:employee_id (full_name)")
         .order("requested_at", { ascending: false });
       if (error) throw error;
       return data;

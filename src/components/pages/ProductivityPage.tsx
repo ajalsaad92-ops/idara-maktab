@@ -70,9 +70,9 @@ function ProductivityPageComponent() {
         .map((a: any) => (tasks ?? []).find((tk: any) => tk.id === a.task_id))
         .filter(Boolean);
       const total = userTasks.length;
-      const completed = userTasks.filter((tk: any) => tk.status === "مكتملة").length;
-      const inProgress = userTasks.filter((tk: any) => tk.status === "قيد التنفيذ").length;
-      const newTasks = userTasks.filter((tk: any) => tk.status === "جديدة").length;
+      const completed = userTasks.filter((tk: any) => tk.status === "completed").length;
+      const inProgress = userTasks.filter((tk: any) => tk.status === "in_progress").length;
+      const newTasks = userTasks.filter((tk: any) => tk.status === "new").length;
 
       // Calculate hours from attendance
       const userAttendance = (attendance ?? [])

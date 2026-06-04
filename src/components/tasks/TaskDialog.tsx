@@ -145,6 +145,7 @@ export function TaskDialog({ taskId, onClose }: { taskId: string; onClose: () =>
           type: "comment",
           message: `تعليق جديد على: ${task.title}`,
           related_task_id: taskId,
+          link_data: { route: "/tasks", task_id: taskId } as any,
         });
       }
     }
@@ -180,6 +181,7 @@ export function TaskDialog({ taskId, onClose }: { taskId: string; onClose: () =>
       type: "transfer",
       message: `تم نقل مهمة إليك: ${task.title}`,
       related_task_id: taskId,
+      link_data: { route: "/tasks", task_id: taskId } as any,
     });
     setBusy(false);
     if (ae) return toast.error(ae.message);

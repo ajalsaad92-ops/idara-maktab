@@ -99,7 +99,7 @@ export function ManagerDashboard() {
   const completedTasks = tasks.filter((t: any) => t.status === "completed").length;
 
   const pendingTasks = tasks.filter((t: any) =>
-    t.status !== "completed" && t.status !== "archived" && t.status !== "مكتملة" && t.status !== "مؤرشفة"
+    t.status !== "completed" && t.status !== "archived"
   );
   const overdueTasks = pendingTasks.filter((t: any) => t.deadline && new Date(t.deadline) < new Date());
   const dueTodayTasks = pendingTasks.filter((t: any) => {

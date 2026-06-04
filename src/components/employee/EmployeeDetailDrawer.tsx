@@ -95,8 +95,8 @@ export function EmployeeDetailDrawer() {
   const statusColor = isPresent ? "bg-green-500" : (lastEvent ? "bg-red-500" : "bg-slate-500");
   const statusText = isPresent ? "في المكتب" : (lastEvent ? "خارج المكتب" : "غائب");
 
-  const activeTasksCount = tasks?.filter((t: any) => t.tasks.status !== "مكتملة").length || 0;
-  const completedTasksCount = tasks?.filter((t: any) => t.tasks.status === "مكتملة").length || 0;
+  const activeTasksCount = tasks?.filter((t: any) => t.tasks.status !== "completed" && t.tasks.status !== "archived").length || 0;
+  const completedTasksCount = tasks?.filter((t: any) => t.tasks.status === "completed").length || 0;
   
   let hoursIn = 0;
   let hoursOut = 0;

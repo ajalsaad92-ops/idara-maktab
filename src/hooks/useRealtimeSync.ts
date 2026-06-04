@@ -65,6 +65,7 @@ export function useRealtimeSync() {
         () => {
           queryClient.invalidateQueries({ queryKey: ["exit_requests"] });
           queryClient.invalidateQueries({ queryKey: ["employeeDashboard"] });
+          queryClient.invalidateQueries({ queryKey: ["managerDashboard"] });
         }
       )
       .on(
