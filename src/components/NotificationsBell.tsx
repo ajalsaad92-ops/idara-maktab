@@ -188,7 +188,7 @@ export function NotificationsBell() {
             {unread > 0 && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <Button variant="ghost" size="sm" onClick={() => markAllAsRead.mutate()} className="text-xs text-primary hover:bg-primary/10">
-                  <Check className="h-3 w-3 me-1" /> تحديد الكل كمقروء
+                  <Check className="h-3 w-3 me-1" /> {t("mark_all_read")}
                 </Button>
               </motion.div>
             )}
@@ -198,7 +198,7 @@ export function NotificationsBell() {
           {items.length === 0 ? (
             <div className="p-8 text-center flex flex-col items-center justify-center space-y-3">
               <Bell className="w-8 h-8 text-slate-300" />
-              <p className="text-sm text-slate-500 font-medium">لا توجد إشعارات</p>
+              <p className="text-sm text-slate-500 font-medium">{t("no_notifications")}</p>
             </div>
           ) : (
             <div className="flex flex-col">

@@ -69,8 +69,6 @@ export function ExitRequestsPage() {
         event_type: "out",
         reason: req.reason_type + (req.reason_text ? ` - ${req.reason_text}` : ""),
         exit_request_id: req.id,
-        timestamp: now.toISOString(),
-        date: today,
       })
       .select("id")
       .single();
