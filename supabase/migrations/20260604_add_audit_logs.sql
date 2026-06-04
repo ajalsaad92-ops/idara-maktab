@@ -22,9 +22,7 @@ ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow admin to read audit logs"
 ON audit_logs FOR SELECT
 TO authenticated
-USING (EXISTS (
-    SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role = 'admin'
-));
+USING (public.is_manager_or_admin(auth.uid()));
 
 CREATE POLICY "Allow system to insert audit logs"
 ON audit_logs FOR INSERT
@@ -180,3 +178,101 @@ BEGIN
     RETURN v_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Add missing triggers for other entity types
+
+-- Create trigger for task creation
+CREATE OR REPLACE FUNCTION audit_task_creation()
+RETURNS TRIGGER AS $$
+BEGIN
+    PERFORM insert_audit_log(
+        auth.uid(),
+        'create',
+        'task',
+        NEW.id,
+        NULL,
+        jsonb_build_object('title', NEW.title, 'priority', NEW.priority, 'type', NEW.type),
+        NULL
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS audit_task_creation ON tasks;
+CREATE TRIGGER audit_task_creation
+    AFTER INSERT ON tasks
+    FOR EACH ROW
+    EXECUTE FUNCTION audit_task_creation();
+
+-- Create trigger for comment addition
+CREATE OR REPLACE FUNCTION audit_comment_added()
+RETURNS TRIGGER AS $$
+BEGIN
+    PERFORM insert_audit_log(
+        NEW.user_id,
+        'comment',
+        'task',
+        NEW.task_id,
+        NULL,
+        jsonb_build_object('comment', NEW.comment),
+        NULL
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS audit_comment_added ON task_comments;
+CREATE TRIGGER audit_comment_added
+    AFTER INSERT ON task_comments
+    FOR EACH ROW
+    EXECUTE FUNCTION audit_comment_added();
+
+-- Create trigger for exit_requests status change
+CREATE OR REPLACE FUNCTION audit_exit_request_status()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF OLD.status IS DISTINCT FROM NEW.status THEN
+        PERFORM insert_audit_log(
+            auth.uid(),
+            'status_change',
+            'exit_request',
+            NEW.id,
+            jsonb_build_object('status', OLD.status),
+            jsonb_build_object('status', NEW.status, 'reviewer', NEW.reviewed_by),
+            NULL
+        );
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS audit_exit_request_status ON exit_requests;
+CREATE TRIGGER audit_exit_request_status
+    AFTER UPDATE ON exit_requests
+    FOR EACH ROW
+    EXECUTE FUNCTION audit_exit_request_status();
+
+-- Create trigger for employee activation/deactivation
+CREATE OR REPLACE FUNCTION audit_user_activation()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF OLD.is_active IS DISTINCT FROM NEW.is_active THEN
+        PERFORM insert_audit_log(
+            auth.uid(),
+            CASE WHEN NEW.is_active THEN 'activate' ELSE 'deactivate' END,
+            'user',
+            NEW.id,
+            jsonb_build_object('is_active', OLD.is_active),
+            jsonb_build_object('is_active', NEW.is_active),
+            NULL
+        );
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS audit_user_activation ON profiles;
+CREATE TRIGGER audit_user_activation
+    AFTER UPDATE ON profiles
+    FOR EACH ROW
+    EXECUTE FUNCTION audit_user_activation();

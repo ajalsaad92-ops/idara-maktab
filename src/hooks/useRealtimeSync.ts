@@ -20,8 +20,10 @@ export function useRealtimeSync() {
         { event: "*", schema: "public", table: "attendance" },
         () => {
           queryClient.invalidateQueries({ queryKey: ["attendance"] });
+          queryClient.invalidateQueries({ queryKey: ["attendance-recent"] });
           queryClient.invalidateQueries({ queryKey: ["managerDashboard"] });
           queryClient.invalidateQueries({ queryKey: ["employeeDashboard"] });
+          queryClient.invalidateQueries({ queryKey: ["profiles"] });
         }
       )
       .on(
@@ -45,6 +47,38 @@ export function useRealtimeSync() {
         { event: "*", schema: "public", table: "task_comments" },
         () => {
           queryClient.invalidateQueries({ queryKey: ["task_comments"] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "task_assignments" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["task_assignments"] });
+          queryClient.invalidateQueries({ queryKey: ["managerDashboard"] });
+          queryClient.invalidateQueries({ queryKey: ["employeeDashboard"] });
+          queryClient.invalidateQueries({ queryKey: ["profiles"] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "exit_requests" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["exit_requests"] });
+          queryClient.invalidateQueries({ queryKey: ["employeeDashboard"] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "audit_logs" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["audit_logs"] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "role_permissions" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["role_permissions"] });
         }
       )
       .subscribe((status) => {

@@ -101,6 +101,25 @@ export function TaskDialog({ taskId, onClose }: { taskId: string; onClose: () =>
     const { error } = await supabase.from("tasks").update({ status: newStatus as any }).eq("id", taskId);
     setBusy(false);
     if (error) return toast.error(error.message);
+    // Notify task creator and managers when task is completed
+    if (newStatus === "completed" && user) {
+      try {
+        const recipients = new Set<string>();
+        if (task.created_by && task.created_by !== user.id) recipients.add(task.created_by);
+        // Fetch managers/admins
+        const { data: mgrRoles } = await supabase.from("user_roles").select("user_id").in("role", ["admin", "manager"]);
+        (mgrRoles ?? []).forEach((r: any) => { if (r.user_id !== user.id) recipients.add(r.user_id); });
+        for (const uid of recipients) {
+          await supabase.from("notifications").insert({
+            user_id: uid,
+            type: "task_completed",
+            message: `تم إكمال المهمة: ${task.title}`,
+            related_task_id: taskId,
+            link_data: { route: "/tasks", task_id: taskId } as any,
+          });
+        }
+      } catch { /* non-critical */ }
+    }
     toast.success(t("update_status"));
     load();
   };

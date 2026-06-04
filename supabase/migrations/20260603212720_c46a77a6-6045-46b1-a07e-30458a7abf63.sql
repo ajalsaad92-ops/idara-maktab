@@ -175,7 +175,8 @@ CREATE POLICY "ta_select" ON public.task_assignments FOR SELECT TO authenticated
 CREATE POLICY "ta_insert_mgr" ON public.task_assignments FOR INSERT TO authenticated
   WITH CHECK (public.is_manager_or_admin(auth.uid()));
 CREATE POLICY "ta_update_mgr" ON public.task_assignments FOR UPDATE TO authenticated
-  USING (public.is_manager_or_admin(auth.uid()));
+  USING (public.is_manager_or_admin(auth.uid()))
+  WITH CHECK (public.is_manager_or_admin(auth.uid()));
 CREATE POLICY "ta_delete_mgr" ON public.task_assignments FOR DELETE TO authenticated
   USING (public.is_manager_or_admin(auth.uid()));
 
