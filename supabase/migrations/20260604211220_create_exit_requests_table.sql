@@ -11,7 +11,7 @@ CREATE TABLE exit_requests (
     reviewed_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
     reviewed_at TIMESTAMP WITH TIME ZONE,
     reviewer_note TEXT,
-    attendance_event_id UUID REFERENCES attendance_events(id) ON DELETE SET NULL,
+    attendance_event_id UUID REFERENCES attendance(id) ON DELETE SET NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
