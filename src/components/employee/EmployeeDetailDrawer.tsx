@@ -266,7 +266,7 @@ export function EmployeeDetailDrawer() {
               month={new Date().toLocaleString("ar-IQ", { month: "long" })}
               year={new Date().getFullYear().toString()}
               managerName="المدير"
-              institutionName="ديوان المحافظة"
+              institutionName="المراقب"
             />
           </div>
         </div>

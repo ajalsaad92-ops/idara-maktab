@@ -95,7 +95,7 @@ export function EmployeeManagementPage() {
   });
 
   // Load settings for org info
-  const orgName = "ديوان المحافظة";
+  const orgName = "المراقب";
 
   const filtered = (profiles ?? []).filter((p: ProfileRow) => {
     if (search && !p.full_name?.includes(search) && !p.email?.includes(search)) return false;

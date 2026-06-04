@@ -202,7 +202,7 @@ export function SettingsPage() {
           <Card className="p-4 space-y-4">
             <div className="space-y-2">
               <Label>{t("org_name") || "اسم المؤسسة"}</Label>
-              <Input value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="ديوان المحافظة" />
+              <Input value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="المراقب" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">

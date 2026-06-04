@@ -38,7 +38,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               </div>
               <div className="hidden sm:block">
                 <h1 className="text-lg font-bold text-primary">{t("app_title") || "نظام إدارة الموظفين"}</h1>
-                <p className="text-[10px] text-muted-foreground -mt-0.5">{t("subtitle") || "ديوان المحافظة"}</p>
+                <p className="text-[10px] text-muted-foreground -mt-0.5">{t("subtitle") || "المراقب"}</p>
               </div>
             </div>
 
