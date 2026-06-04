@@ -75,7 +75,7 @@
   --sidebar-ring: var(--gold);
 }
 
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+
 
 @layer base {
   * { border-color: var(--color-border); }
