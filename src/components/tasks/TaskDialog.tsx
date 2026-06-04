@@ -23,8 +23,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { fmtDateTime } from "@/lib/format";
 import { StatusBadge, PriorityBadge } from "@/components/employee/EmployeeDashboard";
+import { TaskAttachments } from "@/components/tasks/TaskAttachments";
 import { toast } from "sonner";
-import { Loader2, Send, ArrowRightLeft, Share2 } from "lucide-react";
+import { Loader2, Send, ArrowRightLeft, Share2, Paperclip } from "lucide-react";
 
 type Profile = { id: string; full_name: string };
 
@@ -46,28 +47,36 @@ export function TaskDialog({ taskId, onClose }: { taskId: string; onClose: () =>
   const [busy, setBusy] = useState(false);
 
   const isMgr = role === "admin" || role === "manager";
+  const [allAssignments, setAllAssignments] = useState<any[]>([]);
 
   const load = useCallback(async () => {
-    const [tres, ares, sres, cres, trres, allp] = await Promise.all([
-      supabase.from("tasks").select("*").eq("id", taskId).maybeSingle(),
-      supabase.from("task_assignments").select("*").eq("task_id", taskId).eq("is_active", true),
-      supabase.from("task_shares").select("*").eq("task_id", taskId),
-      supabase.from("task_comments").select("*").eq("task_id", taskId).order("created_at"),
-      supabase.from("task_transfers").select("*").eq("task_id", taskId).order("transferred_at"),
-      supabase.from("profiles").select("id, full_name"),
-    ]);
-    setTask(tres.data);
-    setAssignments(ares.data ?? []);
-    setShares(sres.data ?? []);
-    setComments(cres.data ?? []);
-    setTransfers(trres.data ?? []);
-    const all = (allp.data ?? []) as Profile[];
-    setAllProfiles(all);
-    const map: Record<string, Profile> = {};
-    all.forEach((p) => (map[p.id] = p));
-    setProfiles(map);
-    setNewStatus(tres.data?.status ?? "");
-  }, [taskId]);
+    try {
+      const [tres, ares, allAres, sres, cres, trres, allp] = await Promise.all([
+        supabase.from("tasks").select("*").eq("id", taskId).maybeSingle(),
+        supabase.from("task_assignments").select("*").eq("task_id", taskId).eq("is_active", true),
+        supabase.from("task_assignments").select("*").eq("task_id", taskId),
+        supabase.from("task_shares").select("*").eq("task_id", taskId),
+        supabase.from("task_comments").select("*").eq("task_id", taskId).order("created_at"),
+        supabase.from("task_transfers").select("*").eq("task_id", taskId).order("transferred_at"),
+        supabase.from("profiles").select("id, full_name"),
+      ]);
+      if (tres.error) throw tres.error;
+      setTask(tres.data);
+      setAssignments(ares.data ?? []);
+      setAllAssignments(allAres.data ?? []);
+      setShares(sres.data ?? []);
+      setComments(cres.data ?? []);
+      setTransfers(trres.data ?? []);
+      const all = (allp.data ?? []) as Profile[];
+      setAllProfiles(all);
+      const map: Record<string, Profile> = {};
+      all.forEach((p) => (map[p.id] = p));
+      setProfiles(map);
+      setNewStatus(tres.data?.status ?? "");
+    } catch (err: any) {
+      toast.error(err?.message || t("error_generic"));
+    }
+  }, [taskId, t]);
 
   useEffect(() => {
     load();
@@ -84,6 +93,10 @@ export function TaskDialog({ taskId, onClose }: { taskId: string; onClose: () =>
   }
 
   const updateStatus = async () => {
+    if (newStatus === "completed" && comments.length === 0) {
+      toast.error(t("complete_requires_comment"));
+      return;
+    }
     setBusy(true);
     const { error } = await supabase.from("tasks").update({ status: newStatus as any }).eq("id", taskId);
     setBusy(false);
@@ -125,7 +138,7 @@ export function TaskDialog({ taskId, onClose }: { taskId: string; onClose: () =>
   const transferTask = async () => {
     if (!transferTo || !user) return;
     setBusy(true);
-    // deactivate existing assignments
+    // deactivate existing assignments but keep them for audit
     await supabase.from("task_assignments").update({ is_active: false }).eq("task_id", taskId);
     // add new assignment
     const { error: ae } = await supabase.from("task_assignments").insert({
@@ -201,6 +214,7 @@ export function TaskDialog({ taskId, onClose }: { taskId: string; onClose: () =>
           <TabsList className="w-full">
             <TabsTrigger value="status" className="flex-1">{t("status")}</TabsTrigger>
             <TabsTrigger value="comments" className="flex-1">{t("comments")} ({comments.length})</TabsTrigger>
+            <TabsTrigger value="attachments" className="flex-1"><Paperclip className="h-3 w-3 me-1" /> {t("attachments")}</TabsTrigger>
             <TabsTrigger value="history" className="flex-1">{t("history")}</TabsTrigger>
             <TabsTrigger value="share" className="flex-1">{t("share_with")}</TabsTrigger>
           </TabsList>
@@ -273,6 +287,10 @@ export function TaskDialog({ taskId, onClose }: { taskId: string; onClose: () =>
                 <Send className="h-4 w-4" />
               </Button>
             </div>
+          </TabsContent>
+
+          <TabsContent value="attachments" className="space-y-3 pt-3">
+            <TaskAttachments taskId={taskId} />
           </TabsContent>
 
           <TabsContent value="history" className="space-y-2 pt-3">

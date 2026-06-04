@@ -31,6 +31,7 @@ export function CreateTaskDialog({ open, onOpenChange, onCreated }: { open: bool
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("normal");
   const [deadline, setDeadline] = useState("");
+  const [deadlineTime, setDeadlineTime] = useState("16:00");
   const [assignee, setAssignee] = useState("");
   const [employees, setEmployees] = useState<{ id: string; full_name: string }[]>([]);
   const [busy, setBusy] = useState(false);
@@ -52,7 +53,7 @@ export function CreateTaskDialog({ open, onOpenChange, onCreated }: { open: bool
         type_other: type === "other" ? typeOther : null,
         description: description || null,
         priority: priority as any,
-        deadline: deadline || null,
+        deadline: deadline ? new Date(`${deadline}T${deadlineTime}:00`).toISOString() : null,
         created_by: user.id,
       })
       .select()
@@ -61,22 +62,29 @@ export function CreateTaskDialog({ open, onOpenChange, onCreated }: { open: bool
       setBusy(false);
       return toast.error(error?.message ?? "Failed");
     }
-    await supabase.from("task_assignments").insert({
+    const { error: assignError } = await supabase.from("task_assignments").insert({
       task_id: task.id,
       user_id: assignee,
       assigned_by: user.id,
       is_active: true,
     });
-    await supabase.from("notifications").insert({
+    if (assignError) {
+      setBusy(false);
+      return toast.error(assignError?.message || t("error_generic"));
+    }
+    const { error: notifError } = await supabase.from("notifications").insert({
       user_id: assignee,
       type: "task_assigned",
       message: `مهمة جديدة: ${title}`,
       related_task_id: task.id,
     });
+    if (notifError) {
+      console.error("Notification error:", notifError);
+    }
     setBusy(false);
     toast.success(t("create_task"));
     onOpenChange(false);
-    setTitle(""); setDescription(""); setDeadline(""); setAssignee("");
+    setTitle(""); setDescription(""); setDeadline(""); setDeadlineTime("16:00"); setAssignee("");
     onCreated();
   };
 
@@ -125,22 +133,23 @@ export function CreateTaskDialog({ open, onOpenChange, onCreated }: { open: bool
             <Label>{t("description")}</Label>
             <Textarea value={description} onChange={(e) => setDescription(e.target.value)} className="mt-1" rows={3} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>{t("deadline")}</Label>
-              <Input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} className="mt-1" />
+          <div>
+            <Label>{t("deadline")}</Label>
+            <div className="grid grid-cols-2 gap-2 mt-1">
+              <Input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+              <Input type="time" value={deadlineTime} onChange={(e) => setDeadlineTime(e.target.value)} />
             </div>
-            <div>
-              <Label>{t("assigned_to")}</Label>
-              <Select value={assignee} onValueChange={setAssignee}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="—" /></SelectTrigger>
-                <SelectContent>
-                  {employees.map((e) => (
-                    <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          </div>
+          <div>
+            <Label>{t("assigned_to")}</Label>
+            <Select value={assignee} onValueChange={setAssignee}>
+              <SelectTrigger className="mt-1"><SelectValue placeholder="—" /></SelectTrigger>
+              <SelectContent>
+                {employees.map((e) => (
+                  <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
         <DialogFooter>

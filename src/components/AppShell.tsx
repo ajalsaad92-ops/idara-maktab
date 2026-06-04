@@ -4,50 +4,104 @@ import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Building2, LogOut, Globe } from "lucide-react";
 import { NotificationsBell } from "@/components/NotificationsBell";
+import { useRealtimeSync } from "@/hooks/useRealtimeSync";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppSidebar } from "./layout/AppSidebar";
+import { motion, AnimatePresence } from "framer-motion";
+import { useLocation } from "@tanstack/react-router";
+import { EmployeeDrawerProvider } from "@/contexts/EmployeeDrawerContext";
+import { EmployeeDetailDrawer } from "@/components/employee/EmployeeDetailDrawer";
+import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
+import { useKeyboardShortcuts, CommandPalette } from "@/components/layout/KeyboardShortcuts";
+import { OnboardingTour } from "@/components/layout/OnboardingTour";
 
-export function AppShell({ children }: { children: ReactNode }) {
-  const { profile, role, signOut } = useAuth();
-  const { t, lang, setLang } = useI18n();
+export default function AppShell({ children }: { children: React.ReactNode }) {
+  const { t, lang, setLang, dir } = useI18n();
+  const { profile, signOut, role } = useAuth();
+  const location = useLocation();
+  const { commandPaletteOpen, setCommandPaletteOpen } = useKeyboardShortcuts();
+  const isRTL = dir === "rtl";
 
-  const roleLabel = role === "admin" ? t("role_admin") : role === "manager" ? t("role_manager") : t("role_employee");
+  useRealtimeSync();
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="bg-primary text-primary-foreground sticky top-0 z-30 shadow-md">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-full bg-gold/20 ring-2 ring-gold/40 flex items-center justify-center shrink-0">
-              <Building2 className="h-5 w-5 text-gold" />
+    <EmployeeDrawerProvider>
+      <SidebarProvider>
+        <AppSidebar />
+        <div className={`flex-1 flex flex-col min-h-screen bg-surface relative overflow-hidden ${isRTL ? 'md:mr-64' : 'md:ml-64'}`}>
+          {/* Header */}
+          <header className="sticky top-0 z-10 w-full h-16 bg-white border-b border-border shadow-sm flex items-center justify-between px-4 sm:px-6 shrink-0">
+            <div className="flex items-center gap-3">
+              <SidebarTrigger />
+              <div className="h-8 w-8 bg-primary rounded-md flex items-center justify-center">
+                <span className="text-white font-bold text-lg leading-none">إ</span>
+              </div>
+              <div className="hidden sm:block">
+                <h1 className="text-lg font-bold text-primary">{t("app_title") || "نظام إدارة الموظفين"}</h1>
+                <p className="text-[10px] text-muted-foreground -mt-0.5">{t("subtitle") || "ديوان المحافظة"}</p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <h1 className="font-bold leading-tight truncate">{t("app_name")}</h1>
-              <p className="text-xs opacity-75 truncate">{profile?.full_name} · {roleLabel}</p>
+
+            <div className="flex items-center gap-3">
+              <NotificationsBell />
+
+              <div className="flex items-center gap-2 px-2.5 py-1 bg-green-50 rounded-full border border-green-100 hidden sm:flex">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
+                <span className="text-[11px] font-medium text-green-700">{isRTL ? "مباشر" : "Live"}</span>
+              </div>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setLang(lang === "ar" ? "en" : "ar")}
+                className="text-muted-foreground hover:text-primary"
+              >
+                <Globe className="w-4 h-4 me-1.5" />
+                {lang === "ar" ? "EN" : "AR"}
+              </Button>
+
+              <div className="flex items-center gap-3 ps-4 border-s border-border">
+                <div className="text-end hidden sm:block">
+                  <p className="text-sm font-semibold text-primary">{profile?.full_name}</p>
+                  <p className="text-[10px] text-muted-foreground capitalize">{role}</p>
+                </div>
+                <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-accent transition-all">
+                  <span className="text-white font-bold text-sm">
+                    {profile?.full_name?.[0]?.toUpperCase()}
+                  </span>
+                </div>
+              </div>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => signOut()}
+                className="text-muted-foreground hover:text-danger hover:bg-red-50 hidden sm:flex"
+              >
+                <LogOut className="w-4 h-4" />
+              </Button>
             </div>
-          </div>
-          <div className="flex items-center gap-1">
-            <NotificationsBell />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-primary-foreground hover:bg-white/10"
-              onClick={() => setLang(lang === "ar" ? "en" : "ar")}
-              title={lang === "ar" ? "English" : "العربية"}
-            >
-              <Globe className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-primary-foreground hover:bg-white/10"
-              onClick={signOut}
-              title={t("logout")}
-            >
-              <LogOut className="h-5 w-5" />
-            </Button>
-          </div>
+          </header>
+
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto pb-20 sm:pb-4">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={location.pathname}
+                initial={{ y: 8, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: -8, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                {children}
+              </motion.div>
+            </AnimatePresence>
+          </main>
         </div>
-      </header>
-      <main className="container mx-auto px-4 py-6 pb-20">{children}</main>
-    </div>
+        <EmployeeDetailDrawer />
+        <MobileBottomNav />
+        <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
+        <OnboardingTour />
+      </SidebarProvider>
+    </EmployeeDrawerProvider>
   );
 }

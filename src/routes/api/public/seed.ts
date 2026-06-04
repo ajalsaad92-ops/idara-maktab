@@ -41,6 +41,13 @@ export const Route = createFileRoute("/api/public/seed")({
           return userId!;
         };
 
+        const existingAdmin = await supabaseAdmin.from("profiles").select("id, full_name").eq("full_name", "أحمد المدير").single();
+        if (existingAdmin.data) {
+          return new Response(JSON.stringify({ ok: true, message: "Already seeded" }), {
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+
         const adminId = await ensureUser("admin@test.com", "Admin1234", "أحمد المدير", "admin", "الإدارة العامة");
         const managerId = await ensureUser("manager@test.com", "Manager1234", "خالد المدير", "manager", "مكتب المحافظ");
         const employeeId = await ensureUser("employee@test.com", "Employee1234", "علي الموظف", "employee", "الشؤون الإدارية");
@@ -60,14 +67,24 @@ export const Route = createFileRoute("/api/public/seed")({
 
         const allEmployees = [employeeId, ...dummyIds];
 
-        // Clear & seed attendance for last 3 days
-        await supabaseAdmin.from("attendance").delete().in("user_id", allEmployees);
         const now = new Date();
         for (let d = 2; d >= 0; d--) {
           for (const uid of allEmployees) {
             const day = new Date(now);
             day.setDate(now.getDate() - d);
             const dateStr = day.toISOString().slice(0, 10);
+            
+            const { data: existingAttendance } = await supabaseAdmin
+              .from("attendance")
+              .select("id")
+              .eq("user_id", uid)
+              .eq("event_date", dateStr)
+              .limit(1);
+            
+            if (existingAttendance && existingAttendance.length > 0) {
+              continue;
+            }
+            
             const inAt = new Date(day);
             inAt.setHours(8, Math.floor(Math.random() * 30), 0, 0);
             const outAt = new Date(day);
@@ -84,8 +101,6 @@ export const Route = createFileRoute("/api/public/seed")({
           }
         }
 
-        // Tasks
-        await supabaseAdmin.from("tasks").delete().neq("id", "00000000-0000-0000-0000-000000000000");
         const sampleTasks = [
           { title: "إعداد تقرير شهري للمحافظ", type: "writing", priority: "important", status: "in_progress" },
           { title: "أرشفة مراسلات شهر الماضي", type: "archiving", priority: "normal", status: "new" },
@@ -106,6 +121,17 @@ export const Route = createFileRoute("/api/public/seed")({
 
         for (let i = 0; i < sampleTasks.length; i++) {
           const t = sampleTasks[i];
+          
+          const { data: existingTask } = await supabaseAdmin
+            .from("tasks")
+            .select("id")
+            .eq("title", t.title)
+            .limit(1);
+          
+          if (existingTask && existingTask.length > 0) {
+            continue;
+          }
+          
           const assignees = [allEmployees[i % allEmployees.length]];
           if (i % 3 === 0) assignees.push(allEmployees[(i + 1) % allEmployees.length]);
           const { data: task, error: te } = await supabaseAdmin
@@ -123,18 +149,38 @@ export const Route = createFileRoute("/api/public/seed")({
             .single();
           if (te || !task) continue;
           for (const uid of assignees) {
-            await supabaseAdmin.from("task_assignments").insert({
-              task_id: task.id,
-              user_id: uid,
-              assigned_by: managerId,
-              is_active: true,
-            });
-            await supabaseAdmin.from("notifications").insert({
-              user_id: uid,
-              type: "task_assigned",
-              message: `مهمة جديدة: ${t.title}`,
-              related_task_id: task.id,
-            });
+            const { data: existingAssignment } = await supabaseAdmin
+              .from("task_assignments")
+              .select("id")
+              .eq("task_id", task.id)
+              .eq("user_id", uid)
+              .limit(1);
+            
+            if (!existingAssignment || existingAssignment.length === 0) {
+              await supabaseAdmin.from("task_assignments").insert({
+                task_id: task.id,
+                user_id: uid,
+                assigned_by: managerId,
+                is_active: true,
+              });
+            }
+            
+            const { data: existingNotification } = await supabaseAdmin
+              .from("notifications")
+              .select("id")
+              .eq("user_id", uid)
+              .eq("related_task_id", task.id)
+              .eq("type", "task_assigned")
+              .limit(1);
+            
+            if (!existingNotification || existingNotification.length === 0) {
+              await supabaseAdmin.from("notifications").insert({
+                user_id: uid,
+                type: "task_assigned",
+                message: `مهمة جديدة: ${t.title}`,
+                related_task_id: task.id,
+              });
+            }
           }
           if (i % 2 === 0) {
             await supabaseAdmin.from("task_comments").insert({

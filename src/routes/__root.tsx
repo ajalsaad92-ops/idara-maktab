@@ -4,13 +4,18 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import NProgress from "nprogress";
+import "nprogress/nprogress.css";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+
+NProgress.configure({ showSpinner: false });
 
 function NotFoundComponent() {
   return (
@@ -119,6 +124,15 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const isLoading = useRouterState({ select: (s) => s.status === "pending" });
+
+  useEffect(() => {
+    if (isLoading) {
+      NProgress.start();
+    } else {
+      NProgress.done();
+    }
+  }, [isLoading]);
 
   return (
     <QueryClientProvider client={queryClient}>
