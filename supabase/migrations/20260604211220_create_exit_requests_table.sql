@@ -40,9 +40,9 @@ CREATE POLICY "Managers and HR can view all exit requests"
     ON exit_requests FOR SELECT
     USING (
         EXISTS (
-            SELECT 1 FROM profiles 
-            WHERE profiles.id = auth.uid() 
-            AND (profiles.role IN ('manager', 'hr', 'admin'))
+            SELECT 1 FROM user_roles 
+            WHERE user_roles.user_id = auth.uid() 
+            AND user_roles.role IN ('admin', 'manager')
         )
     );
 
@@ -51,9 +51,9 @@ CREATE POLICY "Managers and HR can update all exit requests"
     ON exit_requests FOR UPDATE
     USING (
         EXISTS (
-            SELECT 1 FROM profiles 
-            WHERE profiles.id = auth.uid() 
-            AND (profiles.role IN ('manager', 'hr', 'admin'))
+            SELECT 1 FROM user_roles 
+            WHERE user_roles.user_id = auth.uid() 
+            AND user_roles.role IN ('admin', 'manager')
         )
     );
 
