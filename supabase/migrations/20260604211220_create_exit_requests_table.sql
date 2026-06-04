@@ -61,4 +61,4 @@ CREATE POLICY "Managers and HR can update all exit requests"
 CREATE TRIGGER exit_requests_updated_at 
     BEFORE UPDATE ON public.exit_requests 
     FOR EACH ROW 
-    EXECUTE FUNCTION public.handle_updated_at();
+    EXECUTE FUNCTION public.set_updated_at();
