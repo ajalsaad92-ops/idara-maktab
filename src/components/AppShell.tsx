@@ -21,6 +21,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const { commandPaletteOpen, setCommandPaletteOpen } = useKeyboardShortcuts();
   const isRTL = dir === "rtl";
+  const page = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("page") : null;
+  const pageTitle = page ? (
+    page === "employees" ? t("employees") :
+    page === "tasks" ? (role === "employee" ? t("my_tasks") : t("tasks")) :
+    page === "productivity" ? t("productivity_table") :
+    page === "attendance" ? t("attendance_log") :
+    page === "departments" ? t("departments") :
+    page === "reports" ? t("reports") :
+    page === "audit" ? t("audit_log") :
+    page === "settings" ? t("settings") :
+    page === "exit-requests" ? t("exit_requests") :
+    t("dashboard")
+  ) : t("dashboard");
 
   useRealtimeSync();
 
@@ -33,12 +46,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <header className="sticky top-0 z-10 w-full h-16 bg-white border-b border-border shadow-sm flex items-center justify-between px-4 sm:px-6 shrink-0">
             <div className="flex items-center gap-3">
               <SidebarTrigger />
-              <div className="h-8 w-8 bg-primary rounded-md flex items-center justify-center">
+              <div className="h-8 w-8 bg-primary rounded-md flex items-center justify-center shrink-0">
                 <span className="text-white font-bold text-lg leading-none">إ</span>
               </div>
-              <div className="hidden sm:block">
-                <h1 className="text-lg font-bold text-primary">{t("app_title") || "نظام إدارة الموظفين"}</h1>
-                <p className="text-[10px] text-muted-foreground -mt-0.5">{t("subtitle") || "المراقب"}</p>
+              <div>
+                <h1 className="text-sm sm:text-lg font-bold text-primary leading-tight">
+                  <span className="sm:hidden">{pageTitle}</span>
+                  <span className="hidden sm:inline">{t("app_title") || "نظام إدارة الموظفين"}</span>
+                </h1>
+                <p className="text-[9px] sm:text-[10px] text-muted-foreground -mt-0.5">
+                  <span className="sm:hidden">
+                    {role === "admin" ? t("role_admin") : role === "manager" ? t("role_manager") : t("role_employee")}
+                  </span>
+                  <span className="hidden sm:inline">{t("subtitle") || "المراقب"}</span>
+                </p>
               </div>
             </div>
 
@@ -60,8 +81,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 {lang === "ar" ? "EN" : "AR"}
               </Button>
 
-              <div className="flex items-center gap-3 ps-4 border-s border-border">
-                <div className="text-end hidden sm:block">
+              <div className="flex items-center gap-3 ps-4 border-s border-border hidden sm:flex">
+                <div className="text-end">
                   <p className="text-sm font-semibold text-primary">{profile?.full_name}</p>
                   <p className="text-[10px] text-muted-foreground capitalize">{role}</p>
                 </div>
@@ -76,7 +97,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 variant="ghost"
                 size="icon"
                 onClick={() => signOut()}
-                className="text-muted-foreground hover:text-danger hover:bg-red-50 hidden sm:flex"
+                className="text-muted-foreground hover:text-danger hover:bg-red-50 flex"
               >
                 <LogOut className="w-4 h-4" />
               </Button>

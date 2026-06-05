@@ -60,30 +60,30 @@ function ReportsPageComponent() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h1 className="text-2xl font-bold">{t("reports") || "التقارير"}</h1>
-        <Button variant="outline" onClick={handlePrint} className="no-print">
+        <h1 className="text-2xl font-bold hidden sm:block">{t("reports") || "التقارير"}</h1>
+        <Button variant="outline" onClick={handlePrint} className="no-print w-full sm:w-auto">
           <Printer className="h-4 w-4 me-1" />
           {t("print") || "طباعة"}
         </Button>
       </div>
       
       <div id="printable-report">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 print:grid-cols-2">
-          <Card className="p-4">
-            <p className="text-sm text-muted-foreground">{t("total_employees") || "إجمالي الموظفين"}</p>
-            <p className="text-2xl font-bold">{stats.totalEmployees}</p>
+        <div className="grid grid-cols-4 gap-2 md:gap-4 print:grid-cols-2">
+          <Card className="p-2 sm:p-4 text-center sm:text-start">
+            <p className="text-[10px] sm:text-sm text-muted-foreground truncate">{t("total_employees") || "إجمالي الموظفين"}</p>
+            <p className="text-sm sm:text-2xl font-bold">{stats.totalEmployees}</p>
           </Card>
-          <Card className="p-4">
-            <p className="text-sm text-muted-foreground">{t("total_tasks") || "إجمالي المهام"}</p>
-            <p className="text-2xl font-bold">{stats.totalTasks}</p>
+          <Card className="p-2 sm:p-4 text-center sm:text-start">
+            <p className="text-[10px] sm:text-sm text-muted-foreground truncate">{t("total_tasks") || "إجمالي المهام"}</p>
+            <p className="text-sm sm:text-2xl font-bold">{stats.totalTasks}</p>
           </Card>
-          <Card className="p-4">
-            <p className="text-sm text-muted-foreground">{t("completed_tasks") || "المهام المكتملة"}</p>
-            <p className="text-2xl font-bold">{stats.completedTasks}</p>
+          <Card className="p-2 sm:p-4 text-center sm:text-start">
+            <p className="text-[10px] sm:text-sm text-muted-foreground truncate">{t("completed_tasks") || "المهام المكتملة"}</p>
+            <p className="text-sm sm:text-2xl font-bold">{stats.completedTasks}</p>
           </Card>
-          <Card className="p-4">
-            <p className="text-sm text-muted-foreground">{t("today_attendance") || "حضور اليوم"}</p>
-            <p className="text-2xl font-bold">{stats.todayAttendance}</p>
+          <Card className="p-2 sm:p-4 text-center sm:text-start">
+            <p className="text-[10px] sm:text-sm text-muted-foreground truncate">{t("today_attendance") || "حضور اليوم"}</p>
+            <p className="text-sm sm:text-2xl font-bold">{stats.todayAttendance}</p>
           </Card>
         </div>
 

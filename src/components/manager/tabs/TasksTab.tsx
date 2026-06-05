@@ -20,12 +20,12 @@ function TasksTab({ tasks, assignments, profilesMap, setOpenCreate, setSelectedT
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-between items-center flex-wrap gap-2">
-        <div className="relative">
+      <div className="flex gap-2 w-full items-center">
+        <div className="relative flex-1 min-w-0">
           <Search className="absolute start-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input placeholder={t("search")} value={search} onChange={(e) => setSearch(e.target.value)} className="ps-8 w-60" />
+          <Input placeholder={t("search")} value={search} onChange={(e) => setSearch(e.target.value)} className="ps-8 w-full h-9 sm:h-10 text-xs sm:text-sm" />
         </div>
-        <Button onClick={() => setOpenCreate(true)}><Plus className="h-4 w-4 me-1" /> {t("create_task")}</Button>
+        <Button size="sm" onClick={() => setOpenCreate(true)} className="shrink-0 h-9 sm:h-10 text-xs sm:text-sm"><Plus className="h-4 w-4 me-1" /> {t("create_task")}</Button>
       </div>
       <Card className="p-4 overflow-x-auto">
         <div className="hidden md:block">

@@ -127,7 +127,7 @@ export function ExitRequestsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">{t("exit_requests") || "طلبات الخروج"}</h1>
+      <h1 className="text-2xl font-bold hidden sm:block">{t("exit_requests") || "طلبات الخروج"}</h1>
       
       <div className="space-y-4">
         <h2 className="text-lg font-semibold">

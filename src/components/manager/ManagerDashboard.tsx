@@ -116,7 +116,7 @@ export function ManagerDashboard() {
   return (
     <div className="space-y-6">
       {/* page-header */}
-      <div>
+      <div className="hidden sm:block">
         <h1 className="text-2xl font-bold text-primary">{t("dashboard")}</h1>
         <p className="text-sm text-muted-foreground mt-1">{t("employee_status")}</p>
       </div>

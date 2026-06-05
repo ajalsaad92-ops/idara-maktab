@@ -59,25 +59,25 @@ export function DepartmentsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">{t("departments") || "الأقسام"}</h1>
+      <h1 className="text-2xl font-bold hidden sm:block">{t("departments") || "الأقسام"}</h1>
       
-      <div className="flex gap-2 flex-wrap">
-        <div className="relative">
+      <div className="flex gap-2 flex-wrap w-full items-center">
+        <div className="relative flex-1 sm:flex-initial min-w-0">
           <Search className="absolute start-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input 
             placeholder={t("search")} 
             value={search} 
             onChange={(e) => setSearch(e.target.value)} 
-            className="ps-8 w-48" 
+            className="ps-8 w-full sm:w-48 h-9 text-xs sm:text-sm" 
           />
         </div>
         <Input 
           placeholder={t("new_department") || "قسم جديد"} 
           value={newDept} 
           onChange={(e) => setNewDept(e.target.value)} 
-          className="w-48" 
+          className="w-full sm:w-48 h-9 text-xs sm:text-sm flex-1 sm:flex-initial" 
         />
-        <Button onClick={handleCreate}>
+        <Button onClick={handleCreate} className="h-9 text-xs sm:text-sm shrink-0">
           <Plus className="h-4 w-4 me-1" />
           {t("add") || "إضافة"}
         </Button>

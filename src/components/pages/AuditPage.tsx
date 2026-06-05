@@ -37,7 +37,7 @@ function AuditPageComponent() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">{t("audit_log") || "سجل المراجعة"}</h1>
+      <h1 className="text-2xl font-bold hidden sm:block">{t("audit_log") || "سجل المراجعة"}</h1>
       <Card className="overflow-x-auto">
         <Table>
           <TableHeader>

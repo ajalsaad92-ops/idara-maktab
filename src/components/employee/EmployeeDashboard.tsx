@@ -33,15 +33,15 @@ type StatCardProps = { icon: React.ReactNode; label: string; value: string | num
 const StatCard = memo(function StatCard({ icon, label, value }: StatCardProps) {
   const isNumber = typeof value === "number";
   return (
-    <Card className="p-4 relative overflow-hidden group shadow-sm hover:shadow-md transition-shadow">
+    <Card className="p-2 md:p-4 relative overflow-hidden group shadow-sm hover:shadow-md transition-shadow">
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-accent opacity-80" />
-      <div className="flex items-center gap-3">
-        <div className="p-2 bg-surface rounded-lg group-hover:scale-110 transition-transform">
+      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-1.5 sm:gap-3">
+        <div className="p-1 sm:p-2 bg-surface rounded-lg group-hover:scale-110 transition-transform shrink-0">
           {icon}
         </div>
-        <div>
-          <p className="text-xs text-muted-foreground">{label}</p>
-          <p className="text-xl font-bold">
+        <div className="text-center sm:text-start min-w-0 w-full">
+          <p className="text-[9px] sm:text-xs text-muted-foreground truncate">{label}</p>
+          <p className="text-sm sm:text-xl font-bold">
             {isNumber ? <CountUp end={value as number} duration={2} separator="," /> : value}
           </p>
         </div>
@@ -394,7 +394,7 @@ export function EmployeeDashboard() {
       </Card>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-4 gap-2 md:gap-4">
         <StatCard icon={<CheckCircle2 className="text-success" />} label={t("today_completed")} value={completedToday} />
         <StatCard icon={<Clock className="text-primary" />} label={t("today_hours_in")} value={fmtHours(hours.inH)} />
         <StatCard icon={<ClockArrowDown className="text-destructive" />} label={t("today_hours_out")} value={fmtHours(hours.outH)} />

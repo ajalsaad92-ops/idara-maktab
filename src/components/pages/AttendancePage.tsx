@@ -194,8 +194,8 @@ export function AttendancePage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h1 className="text-2xl font-bold text-primary">{t("attendance_log") || "سجل الحضور"}</h1>
-        <Button variant="outline" onClick={exportAttendance}>
+        <h1 className="text-2xl font-bold text-primary hidden sm:block">{t("attendance_log") || "سجل الحضور"}</h1>
+        <Button variant="outline" onClick={exportAttendance} className="w-full sm:w-auto">
           <Download className="h-4 w-4 me-1" />
           {t("export_csv") || "تصدير CSV"}
         </Button>

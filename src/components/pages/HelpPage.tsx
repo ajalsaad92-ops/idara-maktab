@@ -8,7 +8,7 @@ export function HelpPage() {
 
   return (
     <div className="space-y-6 max-w-4xl">
-      <h1 className="text-2xl font-bold">{t("help") || "المساعدة"}</h1>
+      <h1 className="text-2xl font-bold hidden sm:block">{t("help") || "المساعدة"}</h1>
       
       <div className="space-y-4">
         <h2 className="text-xl font-semibold">{t("how_it_works") || "كيف يعمل النظام"}</h2>

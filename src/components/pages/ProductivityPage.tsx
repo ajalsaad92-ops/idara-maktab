@@ -192,7 +192,7 @@ function ProductivityPageComponent() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="page-header">
+      <div className="page-header hidden sm:block">
         <div>
           <h1 className="text-2xl font-bold text-primary">
             {t("productivity_table") || "جدول الإنتاجية"}
@@ -217,59 +217,59 @@ function ProductivityPageComponent() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="p-4 border-t-2 border-t-accent hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-accent/10 flex items-center justify-center">
-              <TrendingUp className="h-5 w-5 text-accent" />
+      <div className="grid grid-cols-4 gap-2 md:gap-4">
+        <Card className="p-2 md:p-4 border-t-2 border-t-accent hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-1.5 sm:gap-3">
+            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
+              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-accent" />
             </div>
-            <div>
-              <p className="text-2xl font-bold text-primary">
+            <div className="text-center sm:text-start min-w-0 w-full">
+              <p className="text-sm sm:text-2xl font-bold text-primary">
                 <CountUp end={totalCompleted} duration={1} />
               </p>
-              <p className="text-xs text-muted-foreground">{t("tasks_completed_month") || "مهام مكتملة هذا الشهر"}</p>
+              <p className="text-[9px] sm:text-xs text-muted-foreground truncate">{t("tasks_completed_month") || "مهام مكتملة هذا الشهر"}</p>
             </div>
           </div>
         </Card>
 
-        <Card className="p-4 border-t-2 border-t-primary hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Clock className="h-5 w-5 text-primary" />
+        <Card className="p-2 md:p-4 border-t-2 border-t-primary hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-1.5 sm:gap-3">
+            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             </div>
-            <div>
-              <p className="text-2xl font-bold text-primary">
+            <div className="text-center sm:text-start min-w-0 w-full">
+              <p className="text-sm sm:text-2xl font-bold text-primary">
                 <CountUp end={avgHoursIn} duration={1} decimals={1} />
               </p>
-              <p className="text-xs text-muted-foreground">{t("avg_daily_hours") || "متوسط ساعات الحضور"}</p>
+              <p className="text-[9px] sm:text-xs text-muted-foreground truncate">{t("avg_daily_hours") || "متوسط ساعات الحضور"}</p>
             </div>
           </div>
         </Card>
 
-        <Card className="p-4 border-t-2 border-t-success hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-success/10 flex items-center justify-center">
-              <Trophy className="h-5 w-5 text-success" />
+        <Card className="p-2 md:p-4 border-t-2 border-t-success hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-1.5 sm:gap-3">
+            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-success/10 flex items-center justify-center shrink-0">
+              <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-success" />
             </div>
-            <div>
-              <p className="text-lg font-bold text-primary truncate max-w-[120px]">
+            <div className="text-center sm:text-start min-w-0 w-full">
+              <p className="text-xs sm:text-lg font-bold text-primary truncate">
                 {topPerformer?.profile.full_name?.split(" ")[0] || "—"}
               </p>
-              <p className="text-xs text-success font-semibold">{topPerformer?.score || 0}%</p>
+              <p className="text-[9px] sm:text-xs text-success font-semibold">{topPerformer?.score || 0}%</p>
             </div>
           </div>
         </Card>
 
-        <Card className="p-4 border-t-2 border-t-warning hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-warning/10 flex items-center justify-center">
-              <AlertTriangle className="h-5 w-5 text-warning" />
+        <Card className="p-2 md:p-4 border-t-2 border-t-warning hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-1.5 sm:gap-3">
+            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-warning/10 flex items-center justify-center shrink-0">
+              <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
             </div>
-            <div>
-              <p className="text-lg font-bold text-primary truncate max-w-[120px]">
+            <div className="text-center sm:text-start min-w-0 w-full">
+              <p className="text-xs sm:text-lg font-bold text-primary truncate">
                 {lowPerformer?.profile.full_name?.split(" ")[0] || "—"}
               </p>
-              <p className="text-xs text-warning font-semibold">{lowPerformer?.score || 0}%</p>
+              <p className="text-[9px] sm:text-xs text-warning font-semibold">{lowPerformer?.score || 0}%</p>
             </div>
           </div>
         </Card>

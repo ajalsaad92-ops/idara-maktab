@@ -279,19 +279,19 @@ export function EmployeeManagementPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h1 className="text-2xl font-bold">{t("employees") || "إدارة الموظفين"}</h1>
-        <div className="flex gap-2 flex-wrap">
-          <div className="relative">
+        <h1 className="text-2xl font-bold hidden sm:block">{t("employees") || "إدارة الموظفين"}</h1>
+        <div className="flex gap-2 flex-wrap w-full sm:w-auto items-center">
+          <div className="relative flex-1 sm:flex-initial min-w-0">
             <Search className="absolute start-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder={t("search")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="ps-8 w-48"
+              className="ps-8 w-full sm:w-48 h-9 text-xs sm:text-sm"
             />
           </div>
           <select
-            className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+            className="h-9 rounded-md border border-input bg-background px-3 text-xs sm:text-sm flex-1 sm:flex-initial"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
           >

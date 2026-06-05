@@ -83,21 +83,21 @@ export function TasksPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <h1 className="text-2xl font-bold">{t("tasks") || "إدارة المهام"}</h1>
-        <div className="flex gap-2">
-          <div className="relative">
+    <div className="space-y-4">
+      <div className="flex flex-col gap-2">
+        <h1 className="text-xl sm:text-2xl font-bold hidden sm:block">{t("tasks") || "إدارة المهام"}</h1>
+        <div className="flex gap-2 w-full items-center">
+          <div className="relative flex-1 min-w-0">
             <Search className="absolute start-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input 
               placeholder={t("search")} 
               value={searchQuery} 
               onChange={(e) => setSearchQuery(e.target.value)} 
-              className="ps-8 w-48" 
+              className="ps-8 w-full h-9 sm:h-10 text-xs sm:text-sm" 
             />
           </div>
           {(role === "admin" || role === "manager") && (
-            <Button onClick={() => setOpenCreate(true)}>
+            <Button size="sm" onClick={() => setOpenCreate(true)} className="shrink-0 h-9 sm:h-10 text-xs sm:text-sm">
               <Plus className="h-4 w-4 me-1" />
               {t("create_task")}
             </Button>
