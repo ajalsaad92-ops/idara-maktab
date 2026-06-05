@@ -325,11 +325,13 @@ export function EmployeeDashboard() {
       });
       if (attError) throw attError;
 
-      const { error: reqError } = await (supabase as any)
+      const { data: updated, error: reqError } = await (supabase as any)
         .from("exit_requests")
         .update({ status: "completed" })
-        .eq("id", exitReqId);
+        .eq("id", exitReqId)
+        .select("id");
       if (reqError) throw reqError;
+      if (!updated || updated.length === 0) throw new Error("exit_request_update_failed");
 
       if (managerId) {
         const { data: profile } = await supabase
@@ -371,8 +373,10 @@ export function EmployeeDashboard() {
           };
         }
       );
-      // Background refetch for DB consistency
-      queryClient.invalidateQueries({ queryKey: ["approved_exit_request", user?.id] });
+      // Refetch pending + dashboard for DB consistency, but do NOT refetch approved_exit_request
+      // because the optimistic setQueryData(null) above is correct and a refetch could re-fetch
+      // the 'approved' row before the DB update fully propagates, causing the check-back-in
+      // button to reappear momentarily.
       queryClient.invalidateQueries({ queryKey: ["pending_exit_request", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["employeeDashboard", user?.id] });
       toast.success(t("check_back_in"));
