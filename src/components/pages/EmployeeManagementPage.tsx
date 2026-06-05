@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { MobileCardList, MobileCard, MobileCardRow } from "@/components/ui/mobile-card-list";
 
 interface ProfileRow {
   id: string;
@@ -312,81 +313,127 @@ export function EmployeeManagementPage() {
       </div>
 
       <Card className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t("name")}</TableHead>
-              <TableHead>{t("role")}</TableHead>
-              <TableHead>{t("department")}</TableHead>
-              <TableHead>{t("phone") || "الهاتف"}</TableHead>
-              <TableHead>{t("status")}</TableHead>
-              <TableHead>{t("actions") || "الإجراءات"}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.length === 0 ? (
+        <div className="hidden md:block">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
-                  <EmptyState
-                    icon={<Search className="h-12 w-12 text-muted-foreground/50" />}
-                    title={t("no_data")}
-                    description={t("no_employees_desc")}
-                  />
-                </TableCell>
+                <TableHead>{t("name")}</TableHead>
+                <TableHead>{t("role")}</TableHead>
+                <TableHead>{t("department")}</TableHead>
+                <TableHead>{t("phone") || "الهاتف"}</TableHead>
+                <TableHead>{t("status")}</TableHead>
+                <TableHead>{t("actions") || "الإجراءات"}</TableHead>
               </TableRow>
-            ) : (
-              filtered.map((p: ProfileRow) => (
-                <TableRow key={p.id}>
-                  <TableCell
-                    className="font-medium cursor-pointer hover:text-accent"
-                    onClick={() => openEmployeeDrawer(p.id)}
-                  >
-                    {p.full_name || "—"}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={p.role === "admin" ? "default" : "secondary"}>
-                      {ROLES.find(r => r.value === p.role)?.label || p.role}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{p.department_id ? deptName(p.department_id) : "—"}</TableCell>
-                  <TableCell>{p.phone || "—"}</TableCell>
-                  <TableCell>
-                    {p.is_active !== false ? (
-                      <span className="text-success text-sm">{t("active") || "نشط"}</span>
-                    ) : (
-                      <span className="text-destructive text-sm">{t("inactive") || "معطل"}</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button size="sm" variant="ghost" onClick={() => openEmployeeDrawer(p.id)} title={t("view_details") || "عرض التفاصيل"}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => openEdit(p)} title={t("edit") || "تعديل"}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => openPassReset(p.id)} title={t("change_password") || "تغيير كلمة المرور"}>
-                        <KeyRound className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm" variant="ghost"
-                        onClick={() => toggleActive.mutate({ id: p.id, current: p.is_active !== false })}
-                        title={p.is_active !== false ? (t("disable") || "تعطيل") : (t("enable") || "تفعيل")}
-                      >
-                        {p.is_active !== false ? <Ban className="h-4 w-4 text-destructive" /> : <CheckCircle className="h-4 w-4 text-success" />}
-                      </Button>
-                      {role === "admin" && (
-                        <Button size="sm" variant="ghost" onClick={() => setDeleteId(p.id)} title={t("delete") || "حذف"}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      )}
-                    </div>
+            </TableHeader>
+            <TableBody>
+              {filtered.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8">
+                    <EmptyState
+                      icon={<Search className="h-12 w-12 text-muted-foreground/50" />}
+                      title={t("no_data")}
+                      description={t("no_employees_desc")}
+                    />
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : (
+                filtered.map((p: ProfileRow) => (
+                  <TableRow key={p.id}>
+                    <TableCell
+                      className="font-medium cursor-pointer hover:text-accent"
+                      onClick={() => openEmployeeDrawer(p.id)}
+                    >
+                      {p.full_name || "—"}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={p.role === "admin" ? "default" : "secondary"}>
+                        {ROLES.find(r => r.value === p.role)?.label || p.role}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{p.department_id ? deptName(p.department_id) : "—"}</TableCell>
+                    <TableCell>{p.phone || "—"}</TableCell>
+                    <TableCell>
+                      {p.is_active !== false ? (
+                        <span className="text-success text-sm">{t("active") || "نشط"}</span>
+                      ) : (
+                        <span className="text-destructive text-sm">{t("inactive") || "معطل"}</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => openEmployeeDrawer(p.id)} title={t("view_details") || "عرض التفاصيل"}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => openEdit(p)} title={t("edit") || "تعديل"}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => openPassReset(p.id)} title={t("change_password") || "تغيير كلمة المرور"}>
+                          <KeyRound className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm" variant="ghost"
+                          onClick={() => toggleActive.mutate({ id: p.id, current: p.is_active !== false })}
+                          title={p.is_active !== false ? (t("disable") || "تعطيل") : (t("enable") || "تفعيل")}
+                        >
+                          {p.is_active !== false ? <Ban className="h-4 w-4 text-destructive" /> : <CheckCircle className="h-4 w-4 text-success" />}
+                        </Button>
+                        {role === "admin" && (
+                          <Button size="sm" variant="ghost" onClick={() => setDeleteId(p.id)} title={t("delete") || "حذف"}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+        <MobileCardList>
+          {filtered.length === 0 ? (
+            <EmptyState
+              icon={<Search className="h-12 w-12 text-muted-foreground/50" />}
+              title={t("no_data")}
+              description={t("no_employees_desc")}
+            />
+          ) : (
+            filtered.map((p: ProfileRow) => (
+              <MobileCard key={p.id}>
+                <div className="flex justify-between items-start mb-1">
+                  <p className="text-xs sm:text-sm font-bold truncate flex-1">{p.full_name || "—"}</p>
+                  <div className="flex gap-0.5 shrink-0">
+                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => openEmployeeDrawer(p.id)} title={t("view_details") || "عرض"}>
+                      <Eye className="h-3 w-3" />
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => openEdit(p)} title={t("edit") || "تعديل"}>
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                    {role === "admin" && (
+                      <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => setDeleteId(p.id)} title={t("delete") || "حذف"}>
+                        <Trash2 className="h-3 w-3 text-destructive" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                <MobileCardRow label={t("role")} value={
+                  <Badge variant={p.role === "admin" ? "default" : "secondary"} className="text-[9px] px-1 py-0 h-4">
+                    {ROLES.find(r => r.value === p.role)?.label || p.role}
+                  </Badge>
+                } />
+                <MobileCardRow label={t("department")} value={p.department_id ? deptName(p.department_id) : "—"} />
+                <MobileCardRow label={t("phone") || "الهاتف"} value={p.phone || "—"} />
+                <MobileCardRow label={t("status")} value={
+                  p.is_active !== false ? (
+                    <span className="text-success">{t("active") || "نشط"}</span>
+                  ) : (
+                    <span className="text-destructive">{t("inactive") || "معطل"}</span>
+                  )
+                } />
+              </MobileCard>
+            ))
+          )}
+        </MobileCardList>
       </Card>
 
       {/* ADD EMPLOYEE DIALOG */}

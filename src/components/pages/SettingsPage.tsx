@@ -231,48 +231,89 @@ export function SettingsPage() {
               <p className="text-muted-foreground animate-pulse">{t("loading") || "جاري التحميل..."}</p>
             </Card>
           ) : (
-            <Card className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="min-w-[200px]">{t("permission") || "الصلاحية"}</TableHead>
-                    {ROLES.map(r => (
-                      <TableHead key={r.key} className="text-center min-w-[120px]">
-                        <div className="flex items-center justify-center gap-1">
-                          {r.label}
-                          {r.key === "admin" && <Lock className="h-3 w-3 text-accent" />}
-                        </div>
-                      </TableHead>
+            <>
+              {/* Desktop/Tablet table view */}
+              <Card className="hidden md:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-[200px]">{t("permission") || "الصلاحية"}</TableHead>
+                      {ROLES.map(r => (
+                        <TableHead key={r.key} className="text-center min-w-[120px]">
+                          <div className="flex items-center justify-center gap-1">
+                            {r.label}
+                            {r.key === "admin" && <Lock className="h-3 w-3 text-accent" />}
+                          </div>
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {PERMISSIONS.map(perm => (
+                      <TableRow key={perm.key}>
+                        <TableCell className="font-medium">{perm.label}</TableCell>
+                        {ROLES.map(r => {
+                          const isGranted = permMap[r.key]?.[perm.key] ?? DEFAULTS[r.key]?.[perm.key] ?? false;
+                          const isLocked = r.key === "admin";
+                          return (
+                            <TableCell key={r.key} className="text-center">
+                              <div className="flex justify-center">
+                                <Checkbox
+                                  checked={isGranted}
+                                  disabled={isLocked}
+                                  onCheckedChange={() => {
+                                    if (!isLocked) togglePerm(r.key, perm.key, isGranted);
+                                  }}
+                                  className={isLocked ? "border-accent data-[state=checked]:bg-accent data-[state=checked]:border-accent" : ""}
+                                />
+                              </div>
+                            </TableCell>
+                          );
+                        })}
+                      </TableRow>
                     ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {PERMISSIONS.map(perm => (
-                    <TableRow key={perm.key}>
-                      <TableCell className="font-medium">{perm.label}</TableCell>
-                      {ROLES.map(r => {
-                        const isGranted = permMap[r.key]?.[perm.key] ?? DEFAULTS[r.key]?.[perm.key] ?? false;
-                        const isLocked = r.key === "admin";
-                        return (
-                          <TableCell key={r.key} className="text-center">
-                            <div className="flex justify-center">
+                  </TableBody>
+                </Table>
+              </Card>
+
+              {/* Mobile card view - one card per role */}
+              <div className="md:hidden space-y-3">
+                {ROLES.map(r => {
+                  const isLocked = r.key === "admin";
+                  return (
+                    <Card key={r.key} className="p-3 space-y-2">
+                      <div className="flex items-center justify-between border-b border-border pb-2">
+                        <p className="font-bold text-sm flex items-center gap-1">
+                          {r.label}
+                          {isLocked && <Lock className="h-3 w-3 text-accent" />}
+                        </p>
+                        {isLocked && (
+                          <span className="text-[9px] text-muted-foreground">{t("locked") || "مقفلة"}</span>
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        {PERMISSIONS.map(perm => {
+                          const isGranted = permMap[r.key]?.[perm.key] ?? DEFAULTS[r.key]?.[perm.key] ?? false;
+                          return (
+                            <div key={perm.key} className="flex items-center justify-between text-[11px] py-1">
+                              <span className="text-muted-foreground truncate flex-1">{perm.label}</span>
                               <Checkbox
                                 checked={isGranted}
                                 disabled={isLocked}
                                 onCheckedChange={() => {
                                   if (!isLocked) togglePerm(r.key, perm.key, isGranted);
                                 }}
-                                className={isLocked ? "border-accent data-[state=checked]:bg-accent data-[state=checked]:border-accent" : ""}
+                                className={isLocked ? "border-accent data-[state=checked]:bg-accent data-[state=checked]:border-accent ms-2" : "ms-2"}
                               />
                             </div>
-                          </TableCell>
-                        );
-                      })}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Card>
+                          );
+                        })}
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            </>
           )}
           <p className="text-xs text-muted-foreground">
             <Lock className="h-3 w-3 inline me-1" />
