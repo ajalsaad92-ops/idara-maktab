@@ -36,18 +36,17 @@ import {
   Loader2,
   AlertCircle,
   CheckCheck,
-  XCircle,
   StopCircle,
 } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { toast } from "sonner";
 
 /* Exit reason constants (Arabic values for DB) */
-const REASON_SHOPPING = "أسواق ومشتريات";
-const REASON_OFFICIAL = "معاملة رسمية";
-const REASON_EMERGENCY = "ظرف طارئ";
-const REASON_DUTY = "واجب رسمي خارجي";
-const REASON_OTHER = "أخرى";
+const REASON_SHOPPING = "\u0623\u0633\u0648\u0627\u0642 \u0648\u0645\u0634\u062a\u0631\u064a\u0627\u062a";
+const REASON_OFFICIAL = "\u0645\u0639\u0627\u0645\u0644\u0629 \u0631\u0633\u0645\u064a\u0629";
+const REASON_EMERGENCY = "\u0638\u0631\u0641 \u0637\u0627\u0631\u0626";
+const REASON_DUTY = "\u0648\u0627\u062c\u0628 \u0631\u0633\u0645\u064a \u062e\u0627\u0631\u062c\u064a";
+const REASON_OTHER = "\u0623\u062e\u0631\u0649";
 
 /* ------------------------------------------------------------------ */
 /* StatCard                                                            */
@@ -229,7 +228,7 @@ export function EmployeeDashboard() {
   /* Mutations                                                         */
   /* ---------------------------------------------------------------- */
 
-  // Attendance event mutation (check-in, check-back-in)
+  // Attendance event mutation (check-in only)
   const attMutation = useMutation({
     mutationFn: async ({ type, rsn }: { type: string; rsn?: string }) => {
       const { error } = await supabase.from("attendance").insert({
@@ -241,6 +240,7 @@ export function EmployeeDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["employeeDashboard", user?.id] });
+      toast.success(t("check_in"));
     },
     onError: (err: any) => {
       toast.error(err?.message || t("error_generic"));
@@ -312,6 +312,7 @@ export function EmployeeDashboard() {
     setDuration("1h");
   };
 
+  // Check-back-in mutation
   const checkBackInMutation = useMutation({
     mutationFn: async () => {
       if (!user || !approvedExitReq) return;
@@ -350,9 +351,9 @@ export function EmployeeDashboard() {
       }
     },
     onSuccess: () => {
-      // Optimistic: immediately clear approvedExitReq so state machine transitions out of EXIT_APPROVED
+      // Optimistic: immediately clear approvedExitReq
       queryClient.setQueryData(["approved_exit_request", user?.id], null);
-      // Optimistic: append the new 'in' event so state machine computes RETURNED (not DAY_ENDED)
+      // Optimistic: append the new 'in' event
       queryClient.setQueryData(
         ["employeeDashboard", user?.id],
         (old: any) => {
@@ -373,10 +374,6 @@ export function EmployeeDashboard() {
           };
         }
       );
-      // Refetch pending + dashboard for DB consistency, but do NOT refetch approved_exit_request
-      // because the optimistic setQueryData(null) above is correct and a refetch could re-fetch
-      // the 'approved' row before the DB update fully propagates, causing the check-back-in
-      // button to reappear momentarily.
       queryClient.invalidateQueries({ queryKey: ["pending_exit_request", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["employeeDashboard", user?.id] });
       toast.success(t("check_back_in"));
@@ -432,13 +429,12 @@ export function EmployeeDashboard() {
 
     const lastType = lastEvent?.event_type as string;
 
-    // PRIORITY 1: Approved exit request — employee is out, waiting for check-back-in
-    // Must check BEFORE DAY_ENDED because manager approval creates an 'out' event
+    // PRIORITY 1: Approved exit request - employee is out, waiting for check-back-in
     if (approvedExitReq && approvedExitReq.status === "approved") {
       return "EXIT_APPROVED";
     }
 
-    // PRIORITY 2: Pending exit request — waiting for manager review
+    // PRIORITY 2: Pending exit request - waiting for manager review
     if (pendingExitReq && pendingExitReq.status === "pending") {
       return "EXIT_REQUESTED";
     }
@@ -450,7 +446,6 @@ export function EmployeeDashboard() {
 
     // PRIORITY 4: Last event is 'in'
     if (lastType === "in") {
-      // Check if there were any 'out' events before this 'in' = returned from exit
       const outBefore = today.findIndex((e: any) => e.event_type === "out");
       const lastInIndex = today.length - 1;
       if (outBefore >= 0 && outBefore < lastInIndex) {
@@ -468,7 +463,6 @@ export function EmployeeDashboard() {
     let outMs = 0;
     const now = Date.now();
 
-    // For "outside" states, we need to calculate outside time from approval time
     let outsideStartTime: number | null = null;
     if (attState === "EXIT_APPROVED" && approvedExitReq?.reviewed_at) {
       outsideStartTime = new Date(approvedExitReq.reviewed_at).getTime();
@@ -483,13 +477,7 @@ export function EmployeeDashboard() {
       if (next) {
         end = new Date(next.event_at).getTime();
       } else {
-        // For the last event, if it's 'in' (currently in office), use now
-        // If it's 'out' (outside), use now but respect outsideStartTime
-        if (cur.event_type === "out" && outsideStartTime && i === today.length - 1) {
-          end = now;
-        } else {
-          end = now;
-        }
+        end = now;
       }
 
       const delta = Math.max(0, end - start);
@@ -497,13 +485,19 @@ export function EmployeeDashboard() {
       else outMs += delta;
     }
 
-    // If outside and we have an approval time, recalculate outside from approval
     if (attState === "EXIT_APPROVED" && outsideStartTime) {
       outMs = Math.max(0, now - outsideStartTime);
     }
 
     return { inH: inMs / 3_600_000, outH: outMs / 3_600_000 };
   }, [today, attState, approvedExitReq]);
+
+  // Exit tracking
+  const exitCount = today.filter((e: any) => e.event_type === "out").length;
+  const firstInEvent = today.find((e: any) => e.event_type === "in");
+  const checkInTimeMs = firstInEvent ? new Date(firstInEvent.event_at).getTime() : null;
+  const hoursSinceCheckIn = checkInTimeMs ? (Date.now() - checkInTimeMs) / 3_600_000 : 0;
+  const isEarlyEndDay = checkInTimeMs !== null && hoursSinceCheckIn < 2;
 
   // 2h reminder (only when in EXIT_APPROVED state)
   const showReminder = attState === "EXIT_APPROVED" && hours.outH > 2;
@@ -523,8 +517,13 @@ export function EmployeeDashboard() {
     return { label: ` due in ${Math.floor(diff / 86400000)}d`, color: "text-muted-foreground" };
   };
 
-  // Check if 4-hour minimum met for end day
-  const hasFourHours = hours.inH >= 4;
+  /* ---------------------------------------------------------------- */
+  /* Button enabled states                                             */
+  /* ---------------------------------------------------------------- */
+  const btn1Enabled = attState === "NOT_CHECKED_IN";
+  const btn2Enabled = attState === "CHECKED_IN" || attState === "RETURNED";
+  const btn3Enabled = attState === "EXIT_APPROVED";
+  const btn4Enabled = attState === "CHECKED_IN" || attState === "RETURNED";
 
   /* ---------------------------------------------------------------- */
   /* Render                                                            */
@@ -577,145 +576,95 @@ export function EmployeeDashboard() {
       )}
 
       {/* ============================================================ */}
-      {/* Attendance state card with 4 buttons                         */}
+      {/* Attendance state card — 4 buttons side by side                */}
       {/* ============================================================ */}
       <Card className="p-6 bg-gradient-to-br from-primary to-[oklch(0.32_0.08_255)] text-primary-foreground border-0">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          <div>
-            <p className="text-sm opacity-80">{t("attendance")}</p>
-            <h2 className="text-2xl font-bold mt-1">
-              {/* State labels */}
-              {attState === "NOT_CHECKED_IN" && t("not_checked_in_yet")}
-              {attState === "CHECKED_IN" &&
-                `${t("in_office")} \u00e2\u0080\u00a7 ${fmtTime(today.find((e: any) => e.event_type === "in")?.event_at) ?? ""}`}
-              {attState === "EXIT_REQUESTED" && `\u23f3 ${t("pending_exit_review")}`}
-              {attState === "EXIT_APPROVED" && `${t("out_office")} \u00e2\u0080\u00a7 ${approvedExitReq?.reason_type ?? ""}`}
-              {attState === "RETURNED" &&
-                `${t("in_office")} \u00e2\u0080\u00a7 ${fmtTime(lastEvent?.event_at) ?? ""}`}
-              {attState === "DAY_ENDED" && `${t("day_ended_summary")} \u00e2\u0080\u00a7 ${fmtHours(hours.inH)}`}
-            </h2>
-            {lastEvent && attState !== "NOT_CHECKED_IN" && (
-              <p className="text-sm opacity-75 mt-1">
-                {t("last_event_label")}
-                {fmtDateTime(lastEvent.event_at)}
-                {lastEvent.reason && ` \u00e2\u0080\u00a7 ${lastEvent.reason}`}
-              </p>
-            )}
-          </div>
-
-          {/* ---- BUTTON 1: Check-in (NOT_CHECKED_IN -> CHECKED_IN) ---- */}
-          {attState === "NOT_CHECKED_IN" && (
-            <Button
-              size="lg"
-              onClick={() => attMutation.mutate({ type: "in" })}
-              disabled={attMutation.isPending}
-              className="text-lg min-w-[120px] min-h-[56px] bg-success hover:bg-success/90 text-success-foreground transition-colors duration-300 px-10 py-7 shadow-md"
-            >
-              {attMutation.isPending ? (
-                <Loader2 className="h-5 w-5 animate-spin me-2" />
-              ) : (
-                <LogIn className="h-5 w-5 me-2" />
-              )}
-              {t("check_in")}
-            </Button>
+        {/* Header */}
+        <div className="text-center md:text-start mb-4">
+          <p className="text-sm opacity-80">{t("attendance")}</p>
+          <h2 className="text-2xl font-bold mt-1">
+            {attState === "NOT_CHECKED_IN" && t("not_checked_in_yet")}
+            {attState === "CHECKED_IN" &&
+              `${t("in_office")} \u00e2\u0080\u00a7 ${fmtTime(today.find((e: any) => e.event_type === "in")?.event_at) ?? ""}`}
+            {attState === "EXIT_REQUESTED" && `\u23f3 ${t("pending_exit_review")}`}
+            {attState === "EXIT_APPROVED" && `${t("out_office")} \u00e2\u0080\u00a7 ${approvedExitReq?.reason_type ?? ""}`}
+            {attState === "RETURNED" &&
+              `${t("in_office")} \u00e2\u0080\u00a7 ${fmtTime(lastEvent?.event_at) ?? ""}`}
+            {attState === "DAY_ENDED" && `${t("day_ended_summary")} \u00e2\u0080\u00a7 ${fmtHours(hours.inH)}`}
+          </h2>
+          {lastEvent && attState !== "NOT_CHECKED_IN" && (
+            <p className="text-sm opacity-75 mt-1">
+              {t("last_event_label")}
+              {fmtDateTime(lastEvent.event_at)}
+              {lastEvent.reason && ` \u00e2\u0080\u00a7 ${lastEvent.reason}`}
+            </p>
           )}
-
-          {/* ---- BUTTON 2: Exit Request (CHECKED_IN -> EXIT_REQUESTED) ---- */}
-          {attState === "CHECKED_IN" && (
-            <Button
-              size="lg"
-              onClick={() => setExitDialogOpen(true)}
-              className="text-lg min-w-[120px] min-h-[56px] bg-warning hover:bg-warning/90 text-warning-foreground transition-colors duration-300 px-10 py-7 shadow-md"
-            >
-              <LogOut className="h-5 w-5 me-2" />
-              {t("exit_request")}
-            </Button>
-          )}
-
-          {/* ---- EXIT_REQUESTED: disabled pending ---- */}
-          {attState === "EXIT_REQUESTED" && (
-            <Button
-              size="lg"
-              disabled
-              className="text-lg min-w-[120px] min-h-[56px] bg-warning/60 text-warning-foreground cursor-not-allowed px-10 py-7 shadow-md"
-            >
-              <Clock className="h-5 w-5 me-2" />
-              {t("pending_exit_review")}
-            </Button>
-          )}
-
-          {attState === "EXIT_APPROVED" && (
-            <Button
-              size="lg"
-              onClick={() => checkBackInMutation.mutate()}
-              disabled={checkBackInMutation.isPending}
-              className="text-lg min-w-[120px] min-h-[56px] bg-blue-500 hover:bg-blue-600 text-white transition-colors duration-300 px-10 py-7 shadow-md"
-            >
-              {checkBackInMutation.isPending ? (
-                <Loader2 className="h-5 w-5 animate-spin me-2" />
-              ) : (
-                <CheckCheck className="h-5 w-5 me-2" />
-              )}
-              {t("check_back_in")}
-            </Button>
-          )}
-
-          {/* ---- RETURNED state: show status + exit request + end day ---- */}
-          {attState === "RETURNED" && (
-            <div className="flex gap-2">
-              <Button
-                size="lg"
-                onClick={() => setExitDialogOpen(true)}
-                className="text-lg min-w-[120px] min-h-[56px] bg-warning hover:bg-warning/90 text-warning-foreground transition-colors duration-300 px-10 py-7 shadow-md"
-              >
-                <LogOut className="h-5 w-5 me-2" />
-                {t("exit_request")}
-              </Button>
+          {attState !== "NOT_CHECKED_IN" && attState !== "DAY_ENDED" && (
+            <div className="flex gap-4 mt-1 text-xs opacity-60">
+              <span>{t("exit_count") || "الخروج"}: {exitCount}</span>
+              <span>{t("today_hours_in")}: {fmtHours(hours.inH)}</span>
             </div>
-          )}
-
-          {/* ---- DAY_ENDED: show summary ---- */}
-          {attState === "DAY_ENDED" && (
-            <Badge className="text-lg px-4 py-2 bg-muted">
-              <CheckCircle2 className="h-5 w-5 me-2" />
-              {t("end_work_day")}
-            </Badge>
           )}
         </div>
 
-        {/* ---- BUTTON 4: End Day (CHECKED_IN -> DAY_ENDED) ---- */}
-        {attState === "CHECKED_IN" && (
-          <div className="mt-4 pt-4 border-t border-white/20">
-            <Button
-              variant="ghost"
-              className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-white/10"
-              onClick={() => setEndDayOpen(true)}
-              disabled={attMutation.isPending}
-            >
-              <StopCircle className="h-4 w-4 me-2" />
-              {t("end_work_day")}
-            </Button>
-          </div>
-        )}
+        {/* ---- 4 Buttons: Always visible, side by side ---- */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* Button 1: Start Work (بداية الدوام) */}
+          <Button
+            size="lg"
+            onClick={() => attMutation.mutate({ type: "in" })}
+            disabled={!btn1Enabled || attMutation.isPending}
+            className="min-h-[56px] transition-all duration-300"
+          >
+            {attMutation.isPending ? (
+              <Loader2 className="h-5 w-5 animate-spin me-2" />
+            ) : (
+              <LogIn className="h-5 w-5 me-2" />
+            )}
+            {t("check_in")}
+          </Button>
 
-        {/* RETURNED also allows end day */}
-        {attState === "RETURNED" && (
-          <div className="mt-4 pt-4 border-t border-white/20">
-            <Button
-              variant="ghost"
-              className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-white/10"
-              onClick={() => setEndDayOpen(true)}
-              disabled={attMutation.isPending}
-            >
-              <StopCircle className="h-4 w-4 me-2" />
-              {t("end_work_day")}
-            </Button>
-          </div>
-        )}
+          {/* Button 2: Exit Request (طلب الخروج) */}
+          <Button
+            size="lg"
+            onClick={() => setExitDialogOpen(true)}
+            disabled={!btn2Enabled}
+            className="min-h-[56px] transition-all duration-300"
+          >
+            <LogOut className="h-5 w-5 me-2" />
+            {t("exit_request")}
+          </Button>
+
+          {/* Button 3: Check-back-in (تسجيل العودة) */}
+          <Button
+            size="lg"
+            onClick={() => checkBackInMutation.mutate()}
+            disabled={!btn3Enabled || checkBackInMutation.isPending}
+            className="min-h-[56px] transition-all duration-300"
+          >
+            {checkBackInMutation.isPending ? (
+              <Loader2 className="h-5 w-5 animate-spin me-2" />
+            ) : (
+              <CheckCheck className="h-5 w-5 me-2" />
+            )}
+            {t("check_back_in")}
+          </Button>
+
+          {/* Button 4: End Day (نهاية الدوام) */}
+          <Button
+            size="lg"
+            onClick={() => setEndDayOpen(true)}
+            disabled={!btn4Enabled}
+            className="min-h-[56px] transition-all duration-300"
+          >
+            <StopCircle className="h-5 w-5 me-2" />
+            {t("end_work_day")}
+          </Button>
+        </div>
       </Card>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-2 md:gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-2 md:gap-4">
         <StatCard
           icon={<CheckCircle2 className="text-success" />}
           label={t("today_completed")}
@@ -735,6 +684,11 @@ export function EmployeeDashboard() {
           icon={<ListChecks className="text-gold" />}
           label={t("pending")}
           value={pendingCount}
+        />
+        <StatCard
+          icon={<LogOut className="text-warning" />}
+          label={t("exits") || "الخروج"}
+          value={exitCount}
         />
       </div>
 
@@ -853,13 +807,13 @@ export function EmployeeDashboard() {
           <DialogHeader>
             <DialogTitle>{t("end_work_day")}</DialogTitle>
             <DialogDescription>
-              {!hasFourHours && (
+              {isEarlyEndDay && (
                 <span className="text-destructive font-medium">
                   <AlertCircle className="h-4 w-4 me-1 inline" />
-                  {t("minimum_hours_required")} (4h)
+                  {t("ending_early") || "أنهيت الدوام مبكراً"} ({fmtHours(hoursSinceCheckIn)})
                 </span>
               )}
-              {hasFourHours && (
+              {!isEarlyEndDay && (
                 <span className="text-success">
                   <CheckCircle2 className="h-4 w-4 me-1 inline" />
                   {fmtHours(hours.inH)} {t("today_hours_in")}
@@ -917,8 +871,9 @@ export function EmployeeDashboard() {
             </Button>
             <Button
               onClick={() => {
-                if (!hasFourHours) {
-                  toast.error(t("minimum_hours_required"));
+                // Require reason if ending early (< 2h)
+                if (isEarlyEndDay && !endDayReason) {
+                  toast.error(t("select_reason"));
                   return;
                 }
                 if (!endDayReason) {
@@ -928,7 +883,7 @@ export function EmployeeDashboard() {
                 endDayMutation.mutate();
                 setEndDayOpen(false);
               }}
-              disabled={!endDayReason || !hasFourHours || endDayMutation.isPending}
+              disabled={!endDayReason || endDayMutation.isPending}
             >
               {endDayMutation.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin me-2" />
