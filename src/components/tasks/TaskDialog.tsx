@@ -142,7 +142,7 @@ export function TaskDialog({ taskId, onClose }: { taskId: string; onClose: () =>
       for (const uid of recipients) {
         await supabase.from("notifications").insert({
           user_id: uid,
-          type: "comment",
+          type: "task_commented",
           message: `تعليق جديد على: ${task.title}`,
           related_task_id: taskId,
           link_data: { route: "/tasks", task_id: taskId } as any,
@@ -178,7 +178,7 @@ export function TaskDialog({ taskId, onClose }: { taskId: string; onClose: () =>
     });
     await supabase.from("notifications").insert({
       user_id: transferTo,
-      type: "transfer",
+      type: "task_transferred_in",
       message: `تم نقل مهمة إليك: ${task.title}`,
       related_task_id: taskId,
       link_data: { route: "/tasks", task_id: taskId } as any,
@@ -216,7 +216,7 @@ export function TaskDialog({ taskId, onClose }: { taskId: string; onClose: () =>
             <Badge variant="outline">{t(task.type as any)}</Badge>
             <StatusBadge status={task.status} />
             <PriorityBadge priority={task.priority} />
-            {task.deadline && <Badge variant="secondary">{t("deadline")}: {task.deadline}</Badge>}
+            {task.deadline && <Badge variant="secondary">{t("deadline")}: {fmtDateTime(task.deadline)}</Badge>}
           </div>
         </DialogHeader>
 
@@ -232,12 +232,12 @@ export function TaskDialog({ taskId, onClose }: { taskId: string; onClose: () =>
         </div>
 
         <Tabs defaultValue="status">
-          <TabsList className="w-full">
-            <TabsTrigger value="status" className="flex-1">{t("status")}</TabsTrigger>
-            <TabsTrigger value="comments" className="flex-1">{t("comments")} ({comments.length})</TabsTrigger>
-            <TabsTrigger value="attachments" className="flex-1"><Paperclip className="h-3 w-3 me-1" /> {t("attachments")}</TabsTrigger>
-            <TabsTrigger value="history" className="flex-1">{t("history")}</TabsTrigger>
-            <TabsTrigger value="share" className="flex-1">{t("share_with")}</TabsTrigger>
+          <TabsList className="flex flex-wrap h-auto w-full">
+            <TabsTrigger value="status" className="flex-1 min-w-[70px]">{t("status")}</TabsTrigger>
+            <TabsTrigger value="comments" className="flex-1 min-w-[90px]">{t("comments")} ({comments.length})</TabsTrigger>
+            <TabsTrigger value="attachments" className="flex-1 min-w-[100px]"><Paperclip className="h-3 w-3 me-1" /> {t("attachments")}</TabsTrigger>
+            <TabsTrigger value="history" className="flex-1 min-w-[70px]">{t("history")}</TabsTrigger>
+            <TabsTrigger value="share" className="flex-1 min-w-[90px]">{t("share_with")}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="status" className="space-y-3 pt-3">

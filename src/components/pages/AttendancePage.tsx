@@ -169,7 +169,7 @@ export function AttendancePage() {
         a.event_type,
         a.reason ?? "",
         a.event_date,
-        new Date(a.event_at).toLocaleTimeString(),
+        new Date(a.event_at).toLocaleTimeString("en-GB", { timeZone: "Asia/Baghdad", hour: "2-digit", minute: "2-digit" }),
       ]),
     ];
     const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
