@@ -58,7 +58,7 @@ function OverviewTab({ profiles, statusByUser }: any) {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+    <div className="grid grid-cols-3 gap-2 sm:gap-4">
       {profiles.map((p: any) => {
         const s = statusByUser[p.id];
         const color =
@@ -66,14 +66,14 @@ function OverviewTab({ profiles, statusByUser }: any) {
         const isOutside = s.status === "out";
         const isNotCheckedIn = s.status !== "in" && s.status !== "out";
         return (
-          <Card key={p.id} className="p-4 rounded-2xl shadow-sm hover:shadow-md transition-shadow cursor-pointer border-t-2 border-t-transparent hover:border-t-accent">
-            <div className="flex items-start gap-3" onClick={() => openEmployeeDrawer(p.id)}>
-              <Circle className={`h-3 w-3 mt-1.5 rounded-full ${color}`} fill="currentColor" />
+          <Card key={p.id} className="p-2 sm:p-4 rounded-xl sm:rounded-2xl shadow-sm hover:shadow-md transition-all cursor-pointer border-t border-t-transparent hover:border-t-accent hover:-translate-y-0.5">
+            <div className="flex items-start gap-1.5 sm:gap-3" onClick={() => openEmployeeDrawer(p.id)}>
+              <Circle className={`h-2.5 w-2.5 mt-1 sm:mt-1.5 rounded-full ${color} shrink-0`} fill="currentColor" />
               <div className="flex-1 min-w-0">
-                <p className="font-semibold truncate">{p.full_name}</p>
-                <p className="text-xs text-muted-foreground">{p.department ?? "—"}</p>
-                <div className="mt-2 text-xs space-y-0.5">
-                  <p>
+                <p className="text-xs sm:text-sm font-semibold truncate">{p.full_name}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{p.department ?? "—"}</p>
+                <div className="mt-1 sm:mt-2 text-[10px] sm:text-xs text-muted-foreground space-y-0.5">
+                  <p className="font-medium text-foreground">
                     {s.status === "in" ? t("in_office") : s.status === "out" ? t("out_office") : t("not_checked")}
                   </p>
                   {s.lastAt && <p>{t("entry_time")}: {new Date(s.lastAt).toLocaleTimeString("en-GB", { timeZone: "Asia/Baghdad", hour: "2-digit", minute: "2-digit" })}</p>}
@@ -82,15 +82,15 @@ function OverviewTab({ profiles, statusByUser }: any) {
               </div>
             </div>
             {(isOutside || isNotCheckedIn) && (
-              <div className="mt-3 pt-3 border-t border-border/50">
+              <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-border/50">
                 <Button
                   size="sm"
                   variant="outline"
-                  className="w-full text-xs"
+                  className="w-full text-[9px] sm:text-xs h-7 sm:h-8 px-1 sm:px-3"
                   disabled={queryingId === p.id}
                   onClick={(e) => { e.stopPropagation(); sendQuery(p.id, isOutside ? "location_check" : "attendance_reminder"); }}
                 >
-                  {queryingId === p.id ? <Loader2 className="h-3 w-3 me-1 animate-spin" /> : isOutside ? <MapPin className="h-3 w-3 me-1" /> : <Megaphone className="h-3 w-3 me-1" />}
+                  {queryingId === p.id ? <Loader2 className="h-3 w-3 me-0.5 sm:me-1 animate-spin" /> : isOutside ? <MapPin className="h-3 w-3 me-0.5 sm:me-1" /> : <Megaphone className="h-3 w-3 me-0.5 sm:me-1" />}
                   {isOutside ? t("location_check") : t("attendance_reminder")}
                 </Button>
               </div>

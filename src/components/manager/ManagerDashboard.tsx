@@ -122,44 +122,44 @@ export function ManagerDashboard() {
       </div>
 
       {/* summary-cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="p-4 relative overflow-hidden group shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5">
+      <div className="grid grid-cols-4 gap-2 md:gap-4">
+        <Card className="p-2 md:p-4 relative overflow-hidden group shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-accent" />
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-primary/10 rounded-xl"><Users className="w-5 h-5 text-primary" /></div>
-            <div>
-              <p className="text-xs text-muted-foreground">{t("total_employees")}</p>
-              <p className="text-2xl font-bold"><CountUp end={totalEmployees} duration={1.5} /></p>
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-1.5 sm:gap-3">
+            <div className="p-1.5 sm:p-2.5 bg-primary/10 rounded-xl"><Users className="w-4 h-4 sm:w-5 h-5 text-primary" /></div>
+            <div className="text-center sm:text-start min-w-0 w-full">
+              <p className="text-[9px] sm:text-xs text-muted-foreground truncate">{t("total_employees")}</p>
+              <p className="text-sm sm:text-2xl font-bold"><CountUp end={totalEmployees} duration={1.5} /></p>
             </div>
           </div>
         </Card>
-        <Card className="p-4 relative overflow-hidden group shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5">
+        <Card className="p-2 md:p-4 relative overflow-hidden group shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-success to-accent" />
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-success/10 rounded-xl"><Clock className="w-5 h-5 text-success" /></div>
-            <div>
-              <p className="text-xs text-muted-foreground">{t("today_attendance")}</p>
-              <p className="text-2xl font-bold"><CountUp end={todayIn} duration={1.5} /></p>
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-1.5 sm:gap-3">
+            <div className="p-1.5 sm:p-2.5 bg-success/10 rounded-xl"><Clock className="w-4 h-4 sm:w-5 h-5 text-success" /></div>
+            <div className="text-center sm:text-start min-w-0 w-full">
+              <p className="text-[9px] sm:text-xs text-muted-foreground truncate">{t("today_attendance")}</p>
+              <p className="text-sm sm:text-2xl font-bold"><CountUp end={todayIn} duration={1.5} /></p>
             </div>
           </div>
         </Card>
-        <Card className="p-4 relative overflow-hidden group shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5">
+        <Card className="p-2 md:p-4 relative overflow-hidden group shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-warning to-accent" />
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-warning/10 rounded-xl"><CheckSquare className="w-5 h-5 text-warning" /></div>
-            <div>
-              <p className="text-xs text-muted-foreground">{t("total_tasks")}</p>
-              <p className="text-2xl font-bold"><CountUp end={activeTasks} duration={1.5} /></p>
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-1.5 sm:gap-3">
+            <div className="p-1.5 sm:p-2.5 bg-warning/10 rounded-xl"><CheckSquare className="w-4 h-4 sm:w-5 h-5 text-warning" /></div>
+            <div className="text-center sm:text-start min-w-0 w-full">
+              <p className="text-[9px] sm:text-xs text-muted-foreground truncate">{t("total_tasks")}</p>
+              <p className="text-sm sm:text-2xl font-bold"><CountUp end={activeTasks} duration={1.5} /></p>
             </div>
           </div>
         </Card>
-        <Card className="p-4 relative overflow-hidden group shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5">
+        <Card className="p-2 md:p-4 relative overflow-hidden group shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-success" />
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-success/10 rounded-xl"><Building2 className="w-5 h-5 text-success" /></div>
-            <div>
-              <p className="text-xs text-muted-foreground">{t("completed_tasks")}</p>
-              <p className="text-2xl font-bold"><CountUp end={completedTasks} duration={1.5} /></p>
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-1.5 sm:gap-3">
+            <div className="p-1.5 sm:p-2.5 bg-success/10 rounded-xl"><Building2 className="w-4 h-4 sm:w-5 h-5 text-success" /></div>
+            <div className="text-center sm:text-start min-w-0 w-full">
+              <p className="text-[9px] sm:text-xs text-muted-foreground truncate">{t("completed_tasks")}</p>
+              <p className="text-sm sm:text-2xl font-bold"><CountUp end={completedTasks} duration={1.5} /></p>
             </div>
           </div>
         </Card>
