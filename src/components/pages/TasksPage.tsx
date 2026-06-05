@@ -11,6 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { Search, Plus } from "lucide-react";
+import { MobileCardList, MobileCard, MobileCardRow } from "@/components/ui/mobile-card-list";
+import { StatusBadge, PriorityBadge } from "@/components/employee/EmployeeDashboard";
 import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
 import { TaskDialog } from "@/components/tasks/TaskDialog";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -103,53 +105,81 @@ export function TasksPage() {
         </div>
       </div>
 
-      <Card className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t("title")}</TableHead>
-              <TableHead>{t("status")}</TableHead>
-              <TableHead>{t("priority")}</TableHead>
-              <TableHead>{t("assigned_to") || "المكلف"}</TableHead>
-              <TableHead>{t("deadline")}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredTasks.length === 0 ? (
+      <Card className="overflow-x-auto p-4">
+        <div className="hidden md:block">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8">
-                  <EmptyState 
-                    icon={<Search className="h-12 w-12 text-muted-foreground/50" />}
-                    title={t("no_data")} 
-                    description={t("no_tasks_desc") || "لا توجد مهام"}
-                  />
-                </TableCell>
+                <TableHead>{t("title")}</TableHead>
+                <TableHead>{t("status")}</TableHead>
+                <TableHead>{t("priority")}</TableHead>
+                <TableHead>{t("assigned_to") || "المكلف"}</TableHead>
+                <TableHead>{t("deadline")}</TableHead>
               </TableRow>
-            ) : (
-              filteredTasks.map((task: any) => {
-                const assignees = (assignments ?? []).filter((a: any) => a.task_id === task.id).map((a: any) => profilesMap[a.user_id]?.full_name).filter(Boolean).join(", ");
-                return (
-                  <TableRow 
-                    key={task.id} 
-                    id={`task-row-${task.id}`}
-                    className={`cursor-pointer hover:bg-accent/5 ${selectedTask === task.id ? "bg-accent/10" : ""}`}
-                    onClick={() => setSelectedTask(task.id)}
-                  >
-                    <TableCell className="font-medium">{task.title}</TableCell>
-                    <TableCell>
-                      <Badge variant={task.status === "completed" ? "default" : "secondary"}>
-                        {task.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{task.priority || "—"}</TableCell>
-                    <TableCell>{assignees || "—"}</TableCell>
-                    <TableCell>{task.deadline ? new Date(task.deadline).toLocaleDateString() : "—"}</TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {filteredTasks.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8">
+                    <EmptyState 
+                      icon={<Search className="h-12 w-12 text-muted-foreground/50" />}
+                      title={t("no_data")} 
+                      description={t("no_tasks_desc") || "لا توجد مهام"}
+                    />
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredTasks.map((task: any) => {
+                  const assignees = (assignments ?? []).filter((a: any) => a.task_id === task.id).map((a: any) => profilesMap[a.user_id]?.full_name).filter(Boolean).join(", ");
+                  return (
+                    <TableRow 
+                      key={task.id} 
+                      id={`task-row-${task.id}`}
+                      className={`cursor-pointer hover:bg-accent/5 ${selectedTask === task.id ? "bg-accent/10" : ""}`}
+                      onClick={() => setSelectedTask(task.id)}
+                    >
+                      <TableCell className="font-medium">{task.title}</TableCell>
+                      <TableCell>
+                        <Badge variant={task.status === "completed" ? "default" : "secondary"}>
+                          {task.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{task.priority || "—"}</TableCell>
+                      <TableCell>{assignees || "—"}</TableCell>
+                      <TableCell>{task.deadline ? new Date(task.deadline).toLocaleDateString() : "—"}</TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
+        <MobileCardList>
+          {filteredTasks.length === 0 ? (
+            <EmptyState 
+              icon={<Search className="h-12 w-12 text-muted-foreground/50" />}
+              title={t("no_data")} 
+              description={t("no_tasks_desc") || "لا توجد مهام"}
+            />
+          ) : (
+            filteredTasks.map((task: any) => {
+              const assignees = (assignments ?? []).filter((a: any) => a.task_id === task.id).map((a: any) => profilesMap[a.user_id]?.full_name).filter(Boolean).join(", ");
+              return (
+                <MobileCard key={task.id} onClick={() => setSelectedTask(task.id)}>
+                  <MobileCardRow label={t("title")} value={task.title} />
+                  <MobileCardRow label={t("status")} value={
+                    <Badge variant={task.status === "completed" ? "default" : "secondary"}>
+                      {task.status}
+                    </Badge>
+                  } />
+                  <MobileCardRow label={t("priority")} value={task.priority || "—"} />
+                  <MobileCardRow label={t("assigned_to") || "المكلف"} value={assignees || "—"} />
+                  <MobileCardRow label={t("deadline")} value={task.deadline ? new Date(task.deadline).toLocaleDateString() : "—"} />
+                </MobileCard>
+              );
+            })
+          )}
+        </MobileCardList>
       </Card>
 
       <CreateTaskDialog open={openCreate} onOpenChange={setOpenCreate} onCreated={invalidate} />

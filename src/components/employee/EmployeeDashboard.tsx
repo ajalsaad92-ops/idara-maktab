@@ -308,7 +308,7 @@ export function EmployeeDashboard() {
       )}
 
       {/* Attendance state card */}
-      <Card className="p-6 bg-gradient-to-br from-primary to-[oklch(0.32_0.08_255)] text-primary-foreground border-0 sm:static fixed bottom-16 left-4 right-4 z-40">
+      <Card className="p-6 bg-gradient-to-br from-primary to-[oklch(0.32_0.08_255)] text-primary-foreground border-0">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div>
             <p className="text-sm opacity-80">{t("attendance")}</p>

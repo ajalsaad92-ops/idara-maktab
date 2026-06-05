@@ -40,42 +40,44 @@ function AttendanceTab({ attendance, profiles, profilesMap, exportAttendance }: 
         <Button variant="outline" size="sm" onClick={() => window.print()}><Printer className="h-4 w-4 me-1" /> {t("print")}</Button>
       </div>
       <Card className="p-4 overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t("name")}</TableHead>
-              <TableHead>{t("type")}</TableHead>
-              <TableHead>{t("reason")}</TableHead>
-              <TableHead>{t("entry_time")}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredAttendance.length === 0 ? (
+        <div className="hidden md:block">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={4} className="h-64 text-center">
-                    <EmptyState 
-                    icon={<Clock className="h-12 w-12 text-muted-foreground/50" />}
-                    title={t("no_data")} 
-                    description={search ? t("no_results_found") : t("no_attendance_records")} 
-                  />
-                </TableCell>
+                <TableHead>{t("name")}</TableHead>
+                <TableHead>{t("type")}</TableHead>
+                <TableHead>{t("reason")}</TableHead>
+                <TableHead>{t("entry_time")}</TableHead>
               </TableRow>
-            ) : (
-              filteredAttendance.slice(0, 200).map((a: any) => (
-                <TableRow key={a.id} onClick={() => openEmployeeDrawer(a.user_id)} className="cursor-pointer transition-colors">
-                  <TableCell>{profilesMap[a.user_id]?.full_name ?? "—"}</TableCell>
-                  <TableCell>
-                    <Badge variant={a.event_type === "in" ? "default" : "destructive"}>
-                      {a.event_type === "in" ? t("check_in") : t("check_out")}
-                    </Badge>
+            </TableHeader>
+            <TableBody>
+              {filteredAttendance.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="h-64 text-center">
+                      <EmptyState 
+                      icon={<Clock className="h-12 w-12 text-muted-foreground/50" />}
+                      title={t("no_data")} 
+                      description={search ? t("no_results_found") : t("no_attendance_records")} 
+                    />
                   </TableCell>
-                  <TableCell>{a.reason ?? "—"}</TableCell>
-                  <TableCell>{fmtDateTime(a.event_at)}</TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : (
+                filteredAttendance.slice(0, 200).map((a: any) => (
+                  <TableRow key={a.id} onClick={() => openEmployeeDrawer(a.user_id)} className="cursor-pointer transition-colors">
+                    <TableCell>{profilesMap[a.user_id]?.full_name ?? "—"}</TableCell>
+                    <TableCell>
+                      <Badge variant={a.event_type === "in" ? "default" : "destructive"}>
+                        {a.event_type === "in" ? t("check_in") : t("check_out")}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{a.reason ?? "—"}</TableCell>
+                    <TableCell>{fmtDateTime(a.event_at)}</TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
         <MobileCardList>
           {filteredAttendance.length === 0 ? (
             <EmptyState 

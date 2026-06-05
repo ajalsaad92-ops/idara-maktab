@@ -28,56 +28,58 @@ function TasksTab({ tasks, assignments, profilesMap, setOpenCreate, setSelectedT
         <Button onClick={() => setOpenCreate(true)}><Plus className="h-4 w-4 me-1" /> {t("create_task")}</Button>
       </div>
       <Card className="p-4 overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t("title")}</TableHead>
-              <TableHead>{t("type")}</TableHead>
-              <TableHead>{t("priority")}</TableHead>
-              <TableHead>{t("status")}</TableHead>
-              <TableHead>{t("assigned_to")}</TableHead>
-              <TableHead>{t("deadline")}</TableHead>
-              <TableHead>{t("actions")}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredTasks.length === 0 ? (
+        <div className="hidden md:block">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={7} className="h-64 text-center">
-                  <EmptyState 
-                    icon={<ClipboardList className="h-12 w-12 text-muted-foreground/50" />}
-                    title={t("no_data")} 
-                    description={search ? t("no_results_found") : t("no_tasks")} 
-                    action={<Button onClick={() => setOpenCreate(true)}><Plus className="h-4 w-4 me-1" /> {t("create_task")}</Button>}
-                  />
-                </TableCell>
+                <TableHead>{t("title")}</TableHead>
+                <TableHead>{t("type")}</TableHead>
+                <TableHead>{t("priority")}</TableHead>
+                <TableHead>{t("status")}</TableHead>
+                <TableHead>{t("assigned_to")}</TableHead>
+                <TableHead>{t("deadline")}</TableHead>
+                <TableHead>{t("actions")}</TableHead>
               </TableRow>
-            ) : (
-              filteredTasks.map((tItem: any) => {
-                const assignedNames = assignments
-                  .filter((a: any) => a.task_id === tItem.id)
-                  .map((a: any) => profilesMap[a.user_id]?.full_name)
-                  .filter(Boolean)
-                  .join("، ");
-                return (
-                  <TableRow key={tItem.id}>
-                    <TableCell className="font-medium">{tItem.title}</TableCell>
-                    <TableCell><Badge variant="outline">{tItem.type}</Badge></TableCell>
-                    <TableCell><PriorityBadge priority={tItem.priority} /></TableCell>
-                    <TableCell><StatusBadge status={tItem.status} /></TableCell>
-                    <TableCell className="text-xs">{assignedNames || "—"}</TableCell>
-                    <TableCell>{tItem.deadline ?? "—"}</TableCell>
-                    <TableCell>
-                      <Button size="sm" variant="outline" onClick={() => setSelectedTask(tItem.id)}>
-                        {tItem.status === "archived" ? "👁" : "✎"}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {filteredTasks.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-64 text-center">
+                    <EmptyState 
+                      icon={<ClipboardList className="h-12 w-12 text-muted-foreground/50" />}
+                      title={t("no_data")} 
+                      description={search ? t("no_results_found") : t("no_tasks")} 
+                      action={<Button onClick={() => setOpenCreate(true)}><Plus className="h-4 w-4 me-1" /> {t("create_task")}</Button>}
+                    />
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredTasks.map((tItem: any) => {
+                  const assignedNames = assignments
+                    .filter((a: any) => a.task_id === tItem.id)
+                    .map((a: any) => profilesMap[a.user_id]?.full_name)
+                    .filter(Boolean)
+                    .join("، ");
+                  return (
+                    <TableRow key={tItem.id}>
+                      <TableCell className="font-medium">{tItem.title}</TableCell>
+                      <TableCell><Badge variant="outline">{tItem.type}</Badge></TableCell>
+                      <TableCell><PriorityBadge priority={tItem.priority} /></TableCell>
+                      <TableCell><StatusBadge status={tItem.status} /></TableCell>
+                      <TableCell className="text-xs">{assignedNames || "—"}</TableCell>
+                      <TableCell>{tItem.deadline ?? "—"}</TableCell>
+                      <TableCell>
+                        <Button size="sm" variant="outline" onClick={() => setSelectedTask(tItem.id)}>
+                          {tItem.status === "archived" ? "👁" : "✎"}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
         <MobileCardList>
           {filteredTasks.length === 0 ? (
             <EmptyState 

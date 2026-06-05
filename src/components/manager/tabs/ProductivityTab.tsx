@@ -14,56 +14,58 @@ function ProductivityTab({ productivity }: { productivity: any[] }) {
   const { openEmployeeDrawer } = useEmployeeDrawer();
   return (
     <Card className="p-4 overflow-x-auto">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>{t("name")}</TableHead>
-            <TableHead>{t("total_assigned")}</TableHead>
-            <TableHead>{t("total_completed")}</TableHead>
-            <TableHead>{t("in_progress_count")}</TableHead>
-            <TableHead>{t("writing")}</TableHead>
-            <TableHead>{t("archiving")}</TableHead>
-            <TableHead>{t("correspondence")}</TableHead>
-            <TableHead>{t("follow_up")}</TableHead>
-            <TableHead>{t("today_hours_in")}</TableHead>
-            <TableHead>{t("today_hours_out")}</TableHead>
-            <TableHead>{t("score")}</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {productivity.length === 0 ? (
+      <div className="hidden md:block">
+        <Table>
+          <TableHeader>
             <TableRow>
-              <TableCell colSpan={11} className="py-8">
-                <EmptyState 
-                  icon={<BarChart3 className="h-12 w-12 text-muted-foreground/50" />}
-                  title={t("no_data")} 
-                  description={t("no_productivity_desc")}
-                />
-              </TableCell>
+              <TableHead>{t("name")}</TableHead>
+              <TableHead>{t("total_assigned")}</TableHead>
+              <TableHead>{t("total_completed")}</TableHead>
+              <TableHead>{t("in_progress_count")}</TableHead>
+              <TableHead>{t("writing")}</TableHead>
+              <TableHead>{t("archiving")}</TableHead>
+              <TableHead>{t("correspondence")}</TableHead>
+              <TableHead>{t("follow_up")}</TableHead>
+              <TableHead>{t("today_hours_in")}</TableHead>
+              <TableHead>{t("today_hours_out")}</TableHead>
+              <TableHead>{t("score")}</TableHead>
             </TableRow>
-          ) : (
-            productivity.map((row) => (
-              <TableRow key={row.profile.id} onClick={() => openEmployeeDrawer(row.profile.id)} className="cursor-pointer transition-colors">
-                <TableCell className="font-medium">{row.profile.full_name}</TableCell>
-              <TableCell>{row.total}</TableCell>
-              <TableCell>{row.completed}</TableCell>
-              <TableCell>{row.inProgress}</TableCell>
-              <TableCell>{row.counts.writing}</TableCell>
-              <TableCell>{row.counts.archiving}</TableCell>
-              <TableCell>{row.counts.correspondence}</TableCell>
-              <TableCell>{row.counts.follow_up}</TableCell>
-              <TableCell>{fmtHours(row.inH)}</TableCell>
-              <TableCell>{fmtHours(row.outH)}</TableCell>
-              <TableCell>
-                <Badge className={row.score >= 70 ? "bg-success text-success-foreground" : row.score >= 40 ? "bg-warning text-warning-foreground" : "bg-destructive text-destructive-foreground"}>
-                  {row.score}%
-                </Badge>
-              </TableCell>
-            </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {productivity.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={11} className="py-8">
+                  <EmptyState 
+                    icon={<BarChart3 className="h-12 w-12 text-muted-foreground/50" />}
+                    title={t("no_data")} 
+                    description={t("no_productivity_desc")}
+                  />
+                </TableCell>
+              </TableRow>
+            ) : (
+              productivity.map((row) => (
+                <TableRow key={row.profile.id} onClick={() => openEmployeeDrawer(row.profile.id)} className="cursor-pointer transition-colors">
+                  <TableCell className="font-medium">{row.profile.full_name}</TableCell>
+                <TableCell>{row.total}</TableCell>
+                <TableCell>{row.completed}</TableCell>
+                <TableCell>{row.inProgress}</TableCell>
+                <TableCell>{row.counts.writing}</TableCell>
+                <TableCell>{row.counts.archiving}</TableCell>
+                <TableCell>{row.counts.correspondence}</TableCell>
+                <TableCell>{row.counts.follow_up}</TableCell>
+                <TableCell>{fmtHours(row.inH)}</TableCell>
+                <TableCell>{fmtHours(row.outH)}</TableCell>
+                <TableCell>
+                  <Badge className={row.score >= 70 ? "bg-success text-success-foreground" : row.score >= 40 ? "bg-warning text-warning-foreground" : "bg-destructive text-destructive-foreground"}>
+                    {row.score}%
+                  </Badge>
+                </TableCell>
+              </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
       <MobileCardList>
         {productivity.length === 0 ? (
           <EmptyState 
