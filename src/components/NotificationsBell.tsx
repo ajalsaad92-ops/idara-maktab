@@ -51,7 +51,7 @@ export function NotificationsBell() {
       return data;
     },
     enabled: !!user,
-    staleTime: 60_000,
+    staleTime: 0,
   });
 
   useEffect(() => {
@@ -61,8 +61,12 @@ export function NotificationsBell() {
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["notifications", user.id] });
+        (payload) => {
+          // Instant cache update - no network round-trip
+          queryClient.setQueryData(["notifications", user.id], (old: any[] = []) => {
+            const newNotif = payload.new;
+            return [newNotif, ...old].slice(0, 30);
+          });
           setBellBouncing(true);
           setTimeout(() => setBellBouncing(false), 1000);
         }
@@ -70,7 +74,12 @@ export function NotificationsBell() {
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
-        () => queryClient.invalidateQueries({ queryKey: ["notifications", user.id] })
+        (payload) => {
+          // Instant cache update for read status changes
+          queryClient.setQueryData(["notifications", user.id], (old: any[] = []) =>
+            old.map((n) => (n.id === payload.new.id ? payload.new : n))
+          );
+        }
       )
       .subscribe();
     return () => { supabase.removeChannel(ch); };
