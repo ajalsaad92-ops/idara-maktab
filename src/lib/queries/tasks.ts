@@ -205,6 +205,7 @@ export function useCreateTask() {
         type: "task_assigned",
         message: `مهمة جديدة: ${params.title}`,
         related_task_id: task.id,
+        link_data: { route: "/tasks", task_id: task.id },
       });
       return task;
     },
@@ -240,6 +241,7 @@ export function useAddComment() {
           type: "task_commented",
           message: `تعليق جديد على: ${params.taskTitle}`,
           related_task_id: params.taskId,
+          link_data: { route: "/tasks", task_id: params.taskId },
         });
       }
     },
@@ -286,6 +288,7 @@ export function useTransferTask() {
         type: "task_transferred_in",
         message: `تم نقل مهمة إليك: ${params.taskTitle}`,
         related_task_id: params.taskId,
+        link_data: { route: "/tasks", task_id: params.taskId },
       });
     },
     onError: (err: any) => {
