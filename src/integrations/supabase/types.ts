@@ -19,6 +19,7 @@ export type Database = {
           event_at: string
           event_date: string
           event_type: Database["public"]["Enums"]["attendance_event"]
+          exit_request_id: string | null
           id: string
           reason: string | null
           user_id: string
@@ -27,6 +28,7 @@ export type Database = {
           event_at?: string
           event_date?: string
           event_type: Database["public"]["Enums"]["attendance_event"]
+          exit_request_id?: string | null
           id?: string
           reason?: string | null
           user_id: string
@@ -35,43 +37,167 @@ export type Database = {
           event_at?: string
           event_date?: string
           event_type?: Database["public"]["Enums"]["attendance_event"]
+          exit_request_id?: string | null
           id?: string
           reason?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "attendance_exit_request_id_fkey"
+            columns: ["exit_request_id"]
+            isOneToOne: false
+            referencedRelation: "exit_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exit_requests: {
+        Row: {
+          attendance_event_id: string | null
+          employee_id: string
+          expected_duration: string
+          id: string
+          note: string | null
+          reason_text: string | null
+          reason_type: string
+          requested_at: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewer_note: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          attendance_event_id?: string | null
+          employee_id: string
+          expected_duration: string
+          id?: string
+          note?: string | null
+          reason_text?: string | null
+          reason_type: string
+          requested_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_note?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attendance_event_id?: string | null
+          employee_id?: string
+          expected_duration?: string
+          id?: string
+          note?: string | null
+          reason_text?: string | null
+          reason_type?: string
+          requested_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_note?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exit_requests_attendance_event_id_fkey"
+            columns: ["attendance_event_id"]
+            isOneToOne: false
+            referencedRelation: "attendance"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exit_requests_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exit_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      manager_queries: {
+        Row: {
+          answered_at: string | null
+          created_at: string
+          employee_id: string
+          employee_response: string | null
+          id: string
+          manager_id: string
+          query_type: string
+          status: string
+        }
+        Insert: {
+          answered_at?: string | null
+          created_at?: string
+          employee_id: string
+          employee_response?: string | null
+          id?: string
+          manager_id: string
+          query_type: string
+          status?: string
+        }
+        Update: {
+          answered_at?: string | null
+          created_at?: string
+          employee_id?: string
+          employee_response?: string | null
+          id?: string
+          manager_id?: string
+          query_type?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manager_queries_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manager_queries_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
           created_at: string
           id: string
           is_read: boolean
-          link_data?: Json | null
           message: string
           related_task_id: string | null
           type: string
           user_id: string
         }
-          Insert: {
-            created_at?: string
-            id?: string
-            is_read?: boolean
-            link_data?: Json | null
-            message: string
-            related_task_id?: string | null
-            type: string
-            user_id: string
-          }
-          Update: {
-            created_at?: string
-            id?: string
-            is_read?: boolean
-            link_data?: Json | null
-            message?: string
-            related_task_id?: string | null
-            type?: string
-            user_id?: string
-          }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          related_task_id?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          related_task_id?: string | null
+          type?: string
+          user_id?: string
+        }
         Relationships: [
           {
             foreignKeyName: "notifications_related_task_id_fkey"
@@ -323,7 +449,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "manager" | "employee"
-      attendance_event: "in" | "out"
+      attendance_event: "in" | "out" | "out_final"
       task_priority: "normal" | "important" | "urgent"
       task_status: "new" | "in_progress" | "completed" | "archived"
       task_type:
@@ -460,7 +586,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "manager", "employee"],
-      attendance_event: ["in", "out"],
+      attendance_event: ["in", "out", "out_final"],
       task_priority: ["normal", "important", "urgent"],
       task_status: ["new", "in_progress", "completed", "archived"],
       task_type: [
