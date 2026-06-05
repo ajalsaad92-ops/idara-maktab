@@ -1,4 +1,4 @@
-import { useState, memo } from "react";
+import { useState, memo, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -25,10 +26,32 @@ import {
 import { TaskDialog } from "@/components/tasks/TaskDialog";
 import CountUp from "react-countup";
 import { fmtDateTime, fmtHours, fmtTime } from "@/lib/format";
-import { LogIn, LogOut, CheckCircle2, Clock, ClockArrowDown, ListChecks, Loader2, FolderOpen, StopCircle } from "lucide-react";
+import {
+  LogIn,
+  LogOut,
+  CheckCircle2,
+  Clock,
+  ClockArrowDown,
+  ListChecks,
+  Loader2,
+  AlertCircle,
+  CheckCheck,
+  XCircle,
+  StopCircle,
+} from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { toast } from "sonner";
 
+/* Exit reason constants (Arabic values for DB) */
+const REASON_SHOPPING = "أسواق ومشتريات";
+const REASON_OFFICIAL = "معاملة رسمية";
+const REASON_EMERGENCY = "ظرف طارئ";
+const REASON_DUTY = "واجب رسمي خارجي";
+const REASON_OTHER = "أخرى";
+
+/* ------------------------------------------------------------------ */
+/* StatCard                                                            */
+/* ------------------------------------------------------------------ */
 type StatCardProps = { icon: React.ReactNode; label: string; value: string | number };
 const StatCard = memo(function StatCard({ icon, label, value }: StatCardProps) {
   const isNumber = typeof value === "number";
@@ -50,22 +73,58 @@ const StatCard = memo(function StatCard({ icon, label, value }: StatCardProps) {
   );
 });
 
-// 5-state attendance machine
-type AttState = "NOT_CHECKED_IN" | "IN_OFFICE" | "PENDING_EXIT" | "OUTSIDE" | "DAY_ENDED";
+/* ------------------------------------------------------------------ */
+/* 6-state attendance machine                                          */
+/* ------------------------------------------------------------------ */
+type AttState =
+  | "NOT_CHECKED_IN"
+  | "CHECKED_IN"
+  | "EXIT_REQUESTED"
+  | "EXIT_APPROVED"
+  | "RETURNED"
+  | "DAY_ENDED";
 
+/* ------------------------------------------------------------------ */
+/* Main component                                                     */
+/* ------------------------------------------------------------------ */
 export function EmployeeDashboard() {
   const { user } = useAuth();
   const { t, lang } = useI18n();
-  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const queryClient = useQueryClient();
+
+  // UI state
+  const [exitDialogOpen, setExitDialogOpen] = useState(false);
+  const [endDayOpen, setEndDayOpen] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+
+  // Exit-request form
   const [reason, setReason] = useState("");
   const [reasonOther, setReasonOther] = useState("");
   const [duration, setDuration] = useState("1h");
   const [note, setNote] = useState("");
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  const queryClient = useQueryClient();
 
-  // Pending manager query
-  const { data: pendingQuery, isLoading: queryLoading } = useQuery({
+  // End-day form
+  const [endDayReason, setEndDayReason] = useState("");
+  const [endDayReasonOther, setEndDayReasonOther] = useState("");
+  const [endDayTaskId, setEndDayTaskId] = useState("");
+  const [endDayNote, setEndDayNote] = useState("");
+
+  /* ---------------------------------------------------------------- */
+  /* Helpers                                                           */
+  /* ---------------------------------------------------------------- */
+  const baghdadToday = () => {
+    const now = new Date();
+    const baghdadOffset = 3 * 60;
+    const baghdadNow = new Date(now.getTime() + (baghdadOffset + now.getTimezoneOffset()) * 60000);
+    return baghdadNow.toISOString().split("T")[0];
+  };
+
+  /* ---------------------------------------------------------------- */
+  /* Queries                                                           */
+  /* ---------------------------------------------------------------- */
+
+  // 1. Pending manager query (existing)
+  const { data: pendingQuery } = useQuery({
     queryKey: ["pending_manager_query", user?.id],
     queryFn: async () => {
       if (!user) return null;
@@ -82,18 +141,15 @@ export function EmployeeDashboard() {
     staleTime: 30_000,
   });
 
-  // Pending exit request for THIS employee today
+  // 2. Pending exit request (for EXIT_REQUESTED state)
   const { data: pendingExitReq } = useQuery({
     queryKey: ["pending_exit_request", user?.id],
     queryFn: async () => {
       if (!user) return null;
-      const now = new Date();
-      const baghdadOffset = 3 * 60;
-      const baghdadNow = new Date(now.getTime() + (baghdadOffset + now.getTimezoneOffset()) * 60000);
-      const todayStr = baghdadNow.toISOString().split("T")[0];
+      const todayStr = baghdadToday();
       const { data } = await (supabase as any)
         .from("exit_requests")
-        .select("id, status, reason_type")
+        .select("id, status, reason_type, reviewed_at")
         .eq("employee_id", user.id)
         .eq("status", "pending")
         .gte("requested_at", todayStr + "T00:00:00+03:00")
@@ -105,34 +161,32 @@ export function EmployeeDashboard() {
     staleTime: 15_000,
   });
 
-  const respondToQuery = async (response: string) => {
-    if (!pendingQuery || !user) return;
-    await (supabase as any).from("manager_queries").update({
-      status: "answered",
-      employee_response: response,
-      answered_at: new Date().toISOString(),
-    }).eq("id", pendingQuery.id);
-    const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
-    await (supabase as any).from("notifications").insert({
-      user_id: pendingQuery.manager_id,
-      type: "manager_query_response",
-      message: `${profile?.full_name || ""}: ${response}`,
-      link_data: { route: "/dashboard" },
-      is_read: false,
-    });
-    queryClient.invalidateQueries({ queryKey: ["pending_manager_query", user.id] });
-    toast.success(t("success"));
-  };
+  // 3. Approved exit request (for EXIT_APPROVED state - check-back-in button)
+  const { data: approvedExitReq } = useQuery({
+    queryKey: ["approved_exit_request", user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const todayStr = baghdadToday();
+      const { data } = await (supabase as any)
+        .from("exit_requests")
+        .select("id, status, reason_type, reviewed_at, attendance_event_id")
+        .eq("employee_id", user.id)
+        .eq("status", "approved")
+        .gte("requested_at", todayStr + "T00:00:00+03:00")
+        .order("reviewed_at", { ascending: false })
+        .limit(1);
+      return data?.[0] ?? null;
+    },
+    enabled: !!user,
+    staleTime: 15_000,
+  });
 
-  // Main data query: today's attendance + active tasks
+  // 4. Main data: today attendance + active tasks
   const { data, isLoading } = useQuery({
     queryKey: ["employeeDashboard", user?.id],
     queryFn: async () => {
       if (!user) return { today: [], tasks: [] };
-      const now = new Date();
-      const baghdadOffset = 3 * 60;
-      const baghdadNow = new Date(now.getTime() + (baghdadOffset + now.getTimezoneOffset()) * 60000);
-      const todayStr = baghdadNow.toISOString().split("T")[0];
+      const todayStr = baghdadToday();
 
       const [att, tks] = await Promise.all([
         supabase
@@ -145,14 +199,17 @@ export function EmployeeDashboard() {
           .from("task_assignments")
           .select("task_id, is_active, tasks(id, title, type, status, priority, deadline, description, created_at)")
           .eq("user_id", user.id)
-          .eq("is_active", true)
+          .eq("is_active", true),
       ]);
+
       if (tks.error) console.error("Tasks query error:", tks.error);
+
       let activeTasks = (tks.data ?? [])
         .map((a: any) => a.tasks)
         .filter(Boolean)
         .filter((tk: any) => tk.status !== "completed" && tk.status !== "archived");
-      // Fallback: if tasks came back empty due to RLS blocking the join, fetch directly
+
+      // Fallback: direct fetch if RLS blocks the join
       if (activeTasks.length === 0 && (tks.data ?? []).length > 0) {
         const taskIds = (tks.data ?? []).map((a: any) => a.task_id);
         const { data: directTasks } = await supabase
@@ -162,13 +219,18 @@ export function EmployeeDashboard() {
           .not("status", "in", '("completed","archived")');
         activeTasks = directTasks ?? [];
       }
+
       return { today: att.data ?? [], tasks: activeTasks };
     },
     enabled: !!user,
   });
 
-  // Attendance event mutation (check-in, return, end-day)
-  const checkMutation = useMutation({
+  /* ---------------------------------------------------------------- */
+  /* Mutations                                                         */
+  /* ---------------------------------------------------------------- */
+
+  // Attendance event mutation (check-in, check-back-in)
+  const attMutation = useMutation({
     mutationFn: async ({ type, rsn }: { type: string; rsn?: string }) => {
       const { error } = await supabase.from("attendance").insert({
         user_id: user!.id,
@@ -182,30 +244,55 @@ export function EmployeeDashboard() {
     },
     onError: (err: any) => {
       toast.error(err?.message || t("error_generic"));
-    }
+    },
   });
 
-  // Submit exit request ONLY (no 'out' attendance event — manager creates that on approve)
-  const submitExitRequest = async (rsn: string, dur: string, nte: string) => {
+  // End-day mutation: insert 'out' event with reason
+  const endDayMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("attendance").insert({
+        user_id: user!.id,
+        event_type: "out" as any,
+        reason: endDayReason === t("exit_reason_other") ? endDayReasonOther : endDayReason,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["employeeDashboard", user?.id] });
+      toast.success(t("success"));
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || t("error_generic"));
+    },
+  });
+
+  // Submit exit request (no attendance 'out' event - manager creates that on approve)
+  const submitExitRequest = async () => {
     if (!user) return;
+    const rsn = reason === t("exit_reason_other") ? reasonOther || reason : reason;
     const { error } = await (supabase as any).from("exit_requests").insert({
       employee_id: user.id,
       reason_type: rsn,
-      reason_text: nte || null,
-      expected_duration: dur,
+      reason_text: note || null,
+      expected_duration: duration,
       status: "pending",
     });
     if (error) {
       toast.error(error.message);
       return;
     }
+
     // Notify managers
     const { data: managers } = await supabase
       .from("user_roles")
       .select("user_id")
       .in("role", ["manager", "admin"]);
     if (managers && managers.length > 0) {
-      const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .single();
       const notifications = managers.map((m: any) => ({
         user_id: m.user_id,
         type: "exit_request",
@@ -215,49 +302,173 @@ export function EmployeeDashboard() {
       }));
       await (supabase as any).from("notifications").insert(notifications);
     }
+
     toast.success(t("exit_request_sent"));
     queryClient.invalidateQueries({ queryKey: ["pending_exit_request", user.id] });
-    setCheckoutOpen(false);
+    setExitDialogOpen(false);
+    setReason("");
+    setReasonOther("");
+    setNote("");
+    setDuration("1h");
   };
 
+  // Check-back-in after approval: notify manager
+  const handleCheckBackIn = async () => {
+    if (!user || !approvedExitReq) return;
+
+    // Insert attendance 'in' event
+    await attMutation.mutateAsync({ type: "in", rsn: "check_back_in" });
+
+    // Mark exit request as completed
+    await (supabase as any)
+      .from("exit_requests")
+      .update({ status: "completed" })
+      .eq("id", approvedExitReq.id);
+
+    // Notify manager who approved
+    if (approvedExitReq.reviewed_by) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .single();
+      await (supabase as any).from("notifications").insert({
+        user_id: approvedExitReq.reviewed_by,
+        type: "check_back_in",
+        message: `${profile?.full_name || ""} ${t("check_back_in")}`,
+        link_data: { route: "/dashboard" },
+        is_read: false,
+      });
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["approved_exit_request", user.id] });
+  };
+
+  // Respond to manager query
+  const respondToQuery = async (response: string) => {
+    if (!pendingQuery || !user) return;
+    await (supabase as any)
+      .from("manager_queries")
+      .update({
+        status: "answered",
+        employee_response: response,
+        answered_at: new Date().toISOString(),
+      })
+      .eq("id", pendingQuery.id);
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", user.id)
+      .single();
+
+    await (supabase as any).from("notifications").insert({
+      user_id: pendingQuery.manager_id,
+      type: "manager_query_response",
+      message: `${profile?.full_name || ""}: ${response}`,
+      link_data: { route: "/dashboard" },
+      is_read: false,
+    });
+
+    queryClient.invalidateQueries({ queryKey: ["pending_manager_query", user.id] });
+    toast.success(t("success"));
+  };
+
+  /* ---------------------------------------------------------------- */
+  /* Derived state                                                     */
+  /* ---------------------------------------------------------------- */
   const today = data?.today ?? [];
   const tasks = data?.tasks ?? [];
   const lastEvent = today[today.length - 1];
 
-  // 5-state machine
+  // 6-state machine
   const attState: AttState = (() => {
     if (today.length === 0) return "NOT_CHECKED_IN";
-    if ((lastEvent.event_type as string) === "out_final") return "DAY_ENDED";
-    if (lastEvent.event_type === "in") {
-      // If there's a pending exit request, show PENDING_EXIT
-      if (pendingExitReq) return "PENDING_EXIT";
-      return "IN_OFFICE";
+
+    const lastType = lastEvent?.event_type as string;
+
+    // If last event is 'out', day has ended
+    if (lastType === "out" && today.length >= 2) {
+      // Check if there's a completed exit request (day ended) vs approved exit
+      const hasCheckedBackIn = today.some(
+        (e: any, i: number) => i > 0 && e.event_type === "in"
+      );
+      if (!hasCheckedBackIn && today.length >= 2) {
+        // Last event is 'out' with no check-back-in = day ended
+        return "DAY_ENDED";
+      }
     }
-    // last event is 'out' — employee is outside
-    return "OUTSIDE";
+
+    // Check for approved exit request (waiting for check-back-in)
+    if (approvedExitReq && approvedExitReq.status === "approved") {
+      return "EXIT_APPROVED";
+    }
+
+    // Check for pending exit request
+    if (pendingExitReq && pendingExitReq.status === "pending") {
+      return "EXIT_REQUESTED";
+    }
+
+    // If last event is 'in' and we have at least one 'in' event after an 'out' event
+    if (lastType === "in") {
+      // Check if there were any 'out' events before this 'in'
+      const outBefore = today.findIndex((e: any) => e.event_type === "out");
+      const lastInIndex = today.length - 1;
+      if (outBefore >= 0 && outBefore < lastInIndex) {
+        return "RETURNED";
+      }
+      return "CHECKED_IN";
+    }
+
+    // lastType === 'out' with approved exit but no approvedExitReq caught above
+    return "CHECKED_IN";
   })();
 
   // Compute today hours
-  const hours = (() => {
+  const hours = useMemo(() => {
     let inMs = 0;
     let outMs = 0;
     const now = Date.now();
+
+    // For "outside" states, we need to calculate outside time from approval time
+    let outsideStartTime: number | null = null;
+    if (attState === "EXIT_APPROVED" && approvedExitReq?.reviewed_at) {
+      outsideStartTime = new Date(approvedExitReq.reviewed_at).getTime();
+    }
+
     for (let i = 0; i < today.length; i++) {
       const cur = today[i];
       const next = today[i + 1];
       const start = new Date(cur.event_at).getTime();
-      const end = next ? new Date(next.event_at).getTime() : now;
+      let end: number;
+
+      if (next) {
+        end = new Date(next.event_at).getTime();
+      } else {
+        // For the last event, if it's 'in' (currently in office), use now
+        // If it's 'out' (outside), use now but respect outsideStartTime
+        if (cur.event_type === "out" && outsideStartTime && i === today.length - 1) {
+          end = now;
+        } else {
+          end = now;
+        }
+      }
+
       const delta = Math.max(0, end - start);
       if (cur.event_type === "in") inMs += delta;
       else outMs += delta;
     }
-    return { inH: inMs / 3_600_000, outH: outMs / 3_600_000 };
-  })();
 
-  const lastOutDuration = attState === "OUTSIDE"
-    ? (Date.now() - new Date(lastEvent!.event_at).getTime()) / 3_600_000
-    : 0;
-  const showReminder = lastOutDuration > 2;
+    // If outside and we have an approval time, recalculate outside from approval
+    if (attState === "EXIT_APPROVED" && outsideStartTime) {
+      outMs = Math.max(0, now - outsideStartTime);
+    }
+
+    return { inH: inMs / 3_600_000, outH: outMs / 3_600_000 };
+  }, [today, attState, approvedExitReq]);
+
+  // 2h reminder (only when in EXIT_APPROVED state)
+  const showReminder = attState === "EXIT_APPROVED" && hours.outH > 2;
 
   const completedToday = tasks.filter((tk: any) => tk.status === "completed").length;
   const pendingCount = tasks.filter((tk: any) => {
@@ -267,11 +478,19 @@ export function EmployeeDashboard() {
 
   const getDeadlineStatus = (deadline: string) => {
     const diff = new Date(deadline).getTime() - Date.now();
-    if (diff < 0) return { label: `تأخر بـ ${Math.floor(-diff / 3600000)} ساعة`, color: "text-danger" };
-    if (diff < 86400000) return { label: `يتبقى ${Math.floor(diff / 3600000)} ساعة`, color: "text-warning" };
-    return { label: `يتبقى ${Math.floor(diff / 86400000)} يوم`, color: "text-muted-foreground" };
+    if (diff < 0)
+      return { label: ` overdue ${Math.floor(-diff / 3600000)}h`, color: "text-danger" };
+    if (diff < 86400000)
+      return { label: ` due in ${Math.floor(diff / 3600000)}h`, color: "text-warning" };
+    return { label: ` due in ${Math.floor(diff / 86400000)}d`, color: "text-muted-foreground" };
   };
 
+  // Check if 4-hour minimum met for end day
+  const hasFourHours = hours.inH >= 4;
+
+  /* ---------------------------------------------------------------- */
+  /* Render                                                            */
+  /* ---------------------------------------------------------------- */
   if (isLoading) {
     return <EmployeeDashboardSkeleton />;
   }
@@ -293,13 +512,25 @@ export function EmployeeDashboard() {
               {pendingQuery.profiles?.full_name} {t("manager_query_msg")}
             </p>
             <div className="flex gap-2 flex-wrap">
-              <Button size="sm" onClick={() => respondToQuery(t("in_office_now"))} className="bg-success hover:bg-success/90 text-white">
+              <Button
+                size="sm"
+                onClick={() => respondToQuery(t("in_office_now"))}
+                className="bg-success hover:bg-success/90 text-white"
+              >
                 {t("in_office_now")}
               </Button>
-              <Button size="sm" onClick={() => respondToQuery(t("coming_soon"))} className="bg-warning hover:bg-warning/90 text-warning-foreground">
+              <Button
+                size="sm"
+                onClick={() => respondToQuery(t("coming_soon"))}
+                className="bg-warning hover:bg-warning/90 text-warning-foreground"
+              >
                 {t("coming_soon")}
               </Button>
-              <Button size="sm" onClick={() => respondToQuery(t("have_excuse"))} variant="outline">
+              <Button
+                size="sm"
+                onClick={() => respondToQuery(t("have_excuse"))}
+                variant="outline"
+              >
                 {t("have_excuse")}
               </Button>
             </div>
@@ -307,84 +538,131 @@ export function EmployeeDashboard() {
         </Card>
       )}
 
-      {/* Attendance state card */}
+      {/* ============================================================ */}
+      {/* Attendance state card with 4 buttons                         */}
+      {/* ============================================================ */}
       <Card className="p-6 bg-gradient-to-br from-primary to-[oklch(0.32_0.08_255)] text-primary-foreground border-0">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div>
             <p className="text-sm opacity-80">{t("attendance")}</p>
             <h2 className="text-2xl font-bold mt-1">
+              {/* State labels */}
               {attState === "NOT_CHECKED_IN" && t("not_checked_in_yet")}
-              {attState === "IN_OFFICE" && `${t("in_office")} · ${fmtTime(today.find((e: any) => e.event_type === "in")?.event_at) ?? ""}`}
-              {attState === "PENDING_EXIT" && `⏳ ${t("pending_exit_review")}`}
-              {attState === "OUTSIDE" && `${t("out_office")} · ${lastEvent?.reason ?? ""}`}
-              {attState === "DAY_ENDED" && `${t("day_ended_summary")} · ${fmtHours(hours.inH)}`}
+              {attState === "CHECKED_IN" &&
+                `${t("in_office")} \u00e2\u0080\u00a7 ${fmtTime(today.find((e: any) => e.event_type === "in")?.event_at) ?? ""}`}
+              {attState === "EXIT_REQUESTED" && `\u23f3 ${t("pending_exit_review")}`}
+              {attState === "EXIT_APPROVED" && `${t("out_office")} \u00e2\u0080\u00a7 ${approvedExitReq?.reason_type ?? ""}`}
+              {attState === "RETURNED" &&
+                `${t("in_office")} \u00e2\u0080\u00a7 ${fmtTime(lastEvent?.event_at) ?? ""}`}
+              {attState === "DAY_ENDED" && `${t("day_ended_summary")} \u00e2\u0080\u00a7 ${fmtHours(hours.inH)}`}
             </h2>
             {lastEvent && attState !== "NOT_CHECKED_IN" && (
               <p className="text-sm opacity-75 mt-1">
-                {t("last_event_label")}{fmtDateTime(lastEvent.event_at)}
-                {lastEvent.reason && ` · ${lastEvent.reason}`}
+                {t("last_event_label")}
+                {fmtDateTime(lastEvent.event_at)}
+                {lastEvent.reason && ` \u00e2\u0080\u00a7 ${lastEvent.reason}`}
               </p>
             )}
           </div>
 
-          {/* Action buttons based on state */}
-          {attState !== "DAY_ENDED" && (
-            <div className="flex gap-3">
-              {attState === "NOT_CHECKED_IN" && (
-                <Button
-                  size="lg"
-                  onClick={() => checkMutation.mutate({ type: "in" })}
-                  disabled={checkMutation.isPending}
-                  className="text-lg min-w-[120px] min-h-[56px] bg-success hover:bg-success/90 text-success-foreground transition-colors duration-300 px-10 py-7 shadow-md"
-                >
-                  {checkMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin me-2" /> : <LogIn className="h-5 w-5 me-2" />}
-                  {t("check_in")}
-                </Button>
+          {/* ---- BUTTON 1: Check-in (NOT_CHECKED_IN -> CHECKED_IN) ---- */}
+          {attState === "NOT_CHECKED_IN" && (
+            <Button
+              size="lg"
+              onClick={() => attMutation.mutate({ type: "in" })}
+              disabled={attMutation.isPending}
+              className="text-lg min-w-[120px] min-h-[56px] bg-success hover:bg-success/90 text-success-foreground transition-colors duration-300 px-10 py-7 shadow-md"
+            >
+              {attMutation.isPending ? (
+                <Loader2 className="h-5 w-5 animate-spin me-2" />
+              ) : (
+                <LogIn className="h-5 w-5 me-2" />
               )}
-              {attState === "IN_OFFICE" && (
-                <Button
-                  size="lg"
-                  onClick={() => setCheckoutOpen(true)}
-                  className="text-lg min-w-[120px] min-h-[56px] bg-warning hover:bg-warning/90 text-warning-foreground transition-colors duration-300 px-10 py-7 shadow-md"
-                >
-                  <LogOut className="h-5 w-5 me-2" />
-                  {t("exit_request")}
-                </Button>
+              {t("check_in")}
+            </Button>
+          )}
+
+          {/* ---- BUTTON 2: Exit Request (CHECKED_IN -> EXIT_REQUESTED) ---- */}
+          {attState === "CHECKED_IN" && (
+            <Button
+              size="lg"
+              onClick={() => setExitDialogOpen(true)}
+              className="text-lg min-w-[120px] min-h-[56px] bg-warning hover:bg-warning/90 text-warning-foreground transition-colors duration-300 px-10 py-7 shadow-md"
+            >
+              <LogOut className="h-5 w-5 me-2" />
+              {t("exit_request")}
+            </Button>
+          )}
+
+          {/* ---- EXIT_REQUESTED: disabled pending ---- */}
+          {attState === "EXIT_REQUESTED" && (
+            <Button
+              size="lg"
+              disabled
+              className="text-lg min-w-[120px] min-h-[56px] bg-warning/60 text-warning-foreground cursor-not-allowed px-10 py-7 shadow-md"
+            >
+              <Clock className="h-5 w-5 me-2" />
+              {t("pending_exit_review")}
+            </Button>
+          )}
+
+          {/* ---- BUTTON 3: Check-back-in (EXIT_APPROVED -> RETURNED) ---- */}
+          {attState === "EXIT_APPROVED" && (
+            <Button
+              size="lg"
+              onClick={handleCheckBackIn}
+              disabled={attMutation.isPending}
+              className="text-lg min-w-[120px] min-h-[56px] bg-blue-500 hover:bg-blue-600 text-white transition-colors duration-300 px-10 py-7 shadow-md"
+            >
+              {attMutation.isPending ? (
+                <Loader2 className="h-5 w-5 animate-spin me-2" />
+              ) : (
+                <CheckCheck className="h-5 w-5 me-2" />
               )}
-              {attState === "PENDING_EXIT" && (
-                <Button
-                  size="lg"
-                  disabled
-                  className="text-lg min-w-[120px] min-h-[56px] bg-warning/60 text-warning-foreground cursor-not-allowed px-10 py-7 shadow-md"
-                >
-                  ⏳ {t("pending_exit_review")}
-                </Button>
-              )}
-              {attState === "OUTSIDE" && (
-                <>
-                  <Button
-                    size="lg"
-                    onClick={() => checkMutation.mutate({ type: "in" })}
-                    disabled={checkMutation.isPending}
-                    className="text-lg min-w-[120px] min-h-[56px] bg-blue-500 hover:bg-blue-600 text-white transition-colors duration-300 px-10 py-7 shadow-md"
-                  >
-                    {checkMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin me-2" /> : <LogIn className="h-5 w-5 me-2" />}
-                    {t("check_back_in")}
-                  </Button>
-                </>
-              )}
-            </div>
+              {t("check_back_in")}
+            </Button>
+          )}
+
+          {/* ---- RETURNED state display ---- */}
+          {attState === "RETURNED" && (
+            <Badge className="text-lg px-4 py-2 bg-success/20 text-success-foreground">
+              <CheckCheck className="h-5 w-5 me-2" />
+              {t("check_back_in")}
+            </Badge>
+          )}
+
+          {/* ---- DAY_ENDED: show summary ---- */}
+          {attState === "DAY_ENDED" && (
+            <Badge className="text-lg px-4 py-2 bg-muted">
+              <CheckCircle2 className="h-5 w-5 me-2" />
+              {t("end_work_day")}
+            </Badge>
           )}
         </div>
 
-        {/* End work day button — shown only when IN_OFFICE and after 3+ hours */}
-        {attState === "IN_OFFICE" && hours.inH >= 3 && (
+        {/* ---- BUTTON 4: End Day (CHECKED_IN -> DAY_ENDED) ---- */}
+        {attState === "CHECKED_IN" && (
           <div className="mt-4 pt-4 border-t border-white/20">
             <Button
               variant="ghost"
               className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-white/10"
-              onClick={() => checkMutation.mutate({ type: "out_final" })}
-              disabled={checkMutation.isPending}
+              onClick={() => setEndDayOpen(true)}
+              disabled={attMutation.isPending}
+            >
+              <StopCircle className="h-4 w-4 me-2" />
+              {t("end_work_day")}
+            </Button>
+          </div>
+        )}
+
+        {/* RETURNED also allows end day */}
+        {attState === "RETURNED" && (
+          <div className="mt-4 pt-4 border-t border-white/20">
+            <Button
+              variant="ghost"
+              className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-white/10"
+              onClick={() => setEndDayOpen(true)}
+              disabled={attMutation.isPending}
             >
               <StopCircle className="h-4 w-4 me-2" />
               {t("end_work_day")}
@@ -395,22 +673,36 @@ export function EmployeeDashboard() {
 
       {/* Stats */}
       <div className="grid grid-cols-4 gap-2 md:gap-4">
-        <StatCard icon={<CheckCircle2 className="text-success" />} label={t("today_completed")} value={completedToday} />
-        <StatCard icon={<Clock className="text-primary" />} label={t("today_hours_in")} value={fmtHours(hours.inH)} />
-        <StatCard icon={<ClockArrowDown className="text-destructive" />} label={t("today_hours_out")} value={fmtHours(hours.outH)} />
-        <StatCard icon={<ListChecks className="text-gold" />} label={t("pending")} value={pendingCount} />
+        <StatCard
+          icon={<CheckCircle2 className="text-success" />}
+          label={t("today_completed")}
+          value={completedToday}
+        />
+        <StatCard
+          icon={<Clock className="text-primary" />}
+          label={t("today_hours_in")}
+          value={fmtHours(hours.inH)}
+        />
+        <StatCard
+          icon={<ClockArrowDown className="text-destructive" />}
+          label={t("today_hours_out")}
+          value={fmtHours(hours.outH)}
+        />
+        <StatCard
+          icon={<ListChecks className="text-gold" />}
+          label={t("pending")}
+          value={pendingCount}
+        />
       </div>
 
       {/* My Tasks */}
       <Card className="p-5">
         <h3 className="text-lg font-bold mb-4">{t("my_tasks")}</h3>
-        {isLoading ? (
-          <p className="text-center text-muted-foreground py-8">{t("loading")}</p>
-        ) : tasks.length === 0 ? (
+        {tasks.length === 0 ? (
           <EmptyState title={t("no_data")} description={t("no_tasks_assigned")} />
         ) : (
           <div className="grid gap-3">
-            {tasks.map((tk) => (
+            {tasks.map((tk: any) => (
               <button
                 key={tk.id}
                 onClick={() => setSelectedTaskId(tk.id)}
@@ -425,8 +717,18 @@ export function EmployeeDashboard() {
                       <PriorityBadge priority={tk.priority} />
                       {tk.deadline && (
                         <Badge variant="secondary" className="text-xs">
-                          {t("deadline")}: {new Date(tk.deadline).toLocaleString("ar-IQ", { timeZone: "Asia/Baghdad", year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                          <span className={`ms-1 ${getDeadlineStatus(tk.deadline).color}`}>{getDeadlineStatus(tk.deadline).label}</span>
+                          {t("deadline")}:{" "}
+                          {new Date(tk.deadline).toLocaleString("ar-IQ", {
+                            timeZone: "Asia/Baghdad",
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                          <span className={`ms-1 ${getDeadlineStatus(tk.deadline).color}`}>
+                            {getDeadlineStatus(tk.deadline).label}
+                          </span>
                         </Badge>
                       )}
                     </div>
@@ -438,8 +740,10 @@ export function EmployeeDashboard() {
         )}
       </Card>
 
-      {/* Exit request dialog */}
-      <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
+      {/* ============================================================ */}
+      {/* EXIT REQUEST DIALOG                                          */}
+      {/* ============================================================ */}
+      <Dialog open={exitDialogOpen} onOpenChange={setExitDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t("exit_request_title")}</DialogTitle>
@@ -452,15 +756,15 @@ export function EmployeeDashboard() {
                   <SelectValue placeholder={t("select_reason")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="أسواق ومشتريات">{t("exit_reason_shopping")}</SelectItem>
-                  <SelectItem value="معاملة رسمية">{t("exit_reason_official")}</SelectItem>
-                  <SelectItem value="ظرف طارئ">{t("exit_reason_emergency")}</SelectItem>
-                  <SelectItem value="واجب رسمي خارجي">{t("exit_reason_duty")}</SelectItem>
-                  <SelectItem value="أخرى">{t("exit_reason_other")}</SelectItem>
+                  <SelectItem value={REASON_SHOPPING}>{t("exit_reason_shopping")}</SelectItem>
+                  <SelectItem value={REASON_OFFICIAL}>{t("exit_reason_official")}</SelectItem>
+                  <SelectItem value={REASON_EMERGENCY}>{t("exit_reason_emergency")}</SelectItem>
+                  <SelectItem value={REASON_DUTY}>{t("exit_reason_duty")}</SelectItem>
+                  <SelectItem value={REASON_OTHER}>{t("exit_reason_other")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            {reason === "أخرى" && (
+            {reason === REASON_OTHER && (
               <Input
                 placeholder={t("specify_reason")}
                 value={reasonOther}
@@ -488,24 +792,113 @@ export function EmployeeDashboard() {
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCheckoutOpen(false)}>
+            <Button variant="outline" onClick={() => setExitDialogOpen(false)}>
               {t("cancel")}
             </Button>
-            <Button
-              onClick={() => {
-                const rsn = reason === "أخرى" ? reasonOther || reason : reason;
-                // ONLY submit exit request — NO 'out' attendance event here
-                // Manager creates 'out' event on approval
-                submitExitRequest(rsn, duration, note);
-              }}
-              disabled={!reason}
-            >
+            <Button onClick={submitExitRequest} disabled={!reason}>
               {t("submit_request")}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* ============================================================ */}
+      {/* END DAY DIALOG                                               */}
+      {/* ============================================================ */}
+      <Dialog open={endDayOpen} onOpenChange={setEndDayOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("end_work_day")}</DialogTitle>
+            <DialogDescription>
+              {!hasFourHours && (
+                <span className="text-destructive font-medium">
+                  <AlertCircle className="h-4 w-4 me-1 inline" />
+                  {t("minimum_hours_required")} (4h)
+                </span>
+              )}
+              {hasFourHours && (
+                <span className="text-success">
+                  <CheckCircle2 className="h-4 w-4 me-1 inline" />
+                  {fmtHours(hours.inH)} {t("today_hours_in")}
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t("exit_reason")}</label>
+              <Select value={endDayReason} onValueChange={setEndDayReason}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t("select_reason")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="completed_tasks">{t("completed_tasks")}</SelectItem>
+                  <SelectItem value="personal">{t("exit_reason_other")}</SelectItem>
+                  <SelectItem value="official">{t("exit_reason_official")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {endDayReason === "personal" && (
+              <Input
+                placeholder={t("specify_reason")}
+                value={endDayReasonOther}
+                onChange={(e) => setEndDayReasonOther(e.target.value)}
+              />
+            )}
+            {endDayReason === "completed_tasks" && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t("my_tasks")}</label>
+                <Select value={endDayTaskId} onValueChange={setEndDayTaskId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t("select_task")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tasks.map((tk: any) => (
+                      <SelectItem key={tk.id} value={tk.id}>
+                        {tk.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <Input
+              placeholder={t("additional_note")}
+              value={endDayNote}
+              onChange={(e) => setEndDayNote(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEndDayOpen(false)}>
+              {t("cancel")}
+            </Button>
+            <Button
+              onClick={() => {
+                if (!hasFourHours) {
+                  toast.error(t("minimum_hours_required"));
+                  return;
+                }
+                if (!endDayReason) {
+                  toast.error(t("select_reason"));
+                  return;
+                }
+                endDayMutation.mutate();
+                setEndDayOpen(false);
+              }}
+              disabled={!endDayReason || !hasFourHours || endDayMutation.isPending}
+            >
+              {endDayMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin me-2" />
+              ) : (
+                <StopCircle className="h-4 w-4 me-2" />
+              )}
+              {t("end_work_day")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Task dialog */}
       {selectedTaskId && (
         <TaskDialog
           taskId={selectedTaskId}
@@ -519,6 +912,9 @@ export function EmployeeDashboard() {
   );
 }
 
+/* ------------------------------------------------------------------ */
+/* Skeleton                                                           */
+/* ------------------------------------------------------------------ */
 function EmployeeDashboardSkeleton() {
   return (
     <div className="space-y-6">
@@ -534,6 +930,9 @@ function EmployeeDashboardSkeleton() {
   );
 }
 
+/* ------------------------------------------------------------------ */
+/* StatusBadge & PriorityBadge                                        */
+/* ------------------------------------------------------------------ */
 export function StatusBadge({ status }: { status: string }) {
   const { t } = useI18n();
   const map: Record<string, string> = {
@@ -542,7 +941,11 @@ export function StatusBadge({ status }: { status: string }) {
     completed: "bg-green-100 text-green-800 border-green-200",
     archived: "bg-gray-100 text-gray-700 border-gray-200",
   };
-  return <Badge className={`${map[status] ?? ""} border`} variant="outline">{t(status as any)}</Badge>;
+  return (
+    <Badge className={`${map[status] ?? ""} border`} variant="outline">
+      {t(status as any)}
+    </Badge>
+  );
 }
 
 export function PriorityBadge({ priority }: { priority: string }) {
@@ -552,5 +955,9 @@ export function PriorityBadge({ priority }: { priority: string }) {
     important: "bg-amber-100 text-amber-800",
     urgent: "bg-red-100 text-red-800",
   };
-  return <Badge className={map[priority] ?? ""} variant="outline">{t(priority as any)}</Badge>;
+  return (
+    <Badge className={map[priority] ?? ""} variant="outline">
+      {t(priority as any)}
+    </Badge>
+  );
 }
