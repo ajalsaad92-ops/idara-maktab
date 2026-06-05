@@ -175,7 +175,6 @@ export type Database = {
           created_at: string
           id: string
           is_read: boolean
-          link_data: Json | null
           message: string
           related_task_id: string | null
           type: string
@@ -185,7 +184,6 @@ export type Database = {
           created_at?: string
           id?: string
           is_read?: boolean
-          link_data?: Json | null
           message: string
           related_task_id?: string | null
           type: string
@@ -195,7 +193,6 @@ export type Database = {
           created_at?: string
           id?: string
           is_read?: boolean
-          link_data?: Json | null
           message?: string
           related_task_id?: string | null
           type?: string
@@ -232,6 +229,45 @@ export type Database = {
           department?: string | null
           full_name?: string
           id?: string
+        }
+        Relationships: []
+      }
+      role_permissions: {
+        Row: {
+          is_granted: boolean
+          permission_key: string
+          role: string
+          updated_at: string | null
+        }
+        Insert: {
+          is_granted?: boolean
+          permission_key: string
+          role: string
+          updated_at?: string | null
+        }
+        Update: {
+          is_granted?: boolean
+          permission_key?: string
+          role?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      settings: {
+        Row: {
+          key: string
+          updated_at: string | null
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string | null
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string | null
+          value?: Json
         }
         Relationships: []
       }
@@ -429,45 +465,6 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
-        }
-        Relationships: []
-      }
-      role_permissions: {
-        Row: {
-          role: string
-          permission_key: string
-          is_granted: boolean
-          updated_at: string | null
-        }
-        Insert: {
-          role: string
-          permission_key: string
-          is_granted?: boolean
-          updated_at?: string | null
-        }
-        Update: {
-          role?: string
-          permission_key?: string
-          is_granted?: boolean
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      settings: {
-        Row: {
-          key: string
-          value: any
-          updated_at: string | null
-        }
-        Insert: {
-          key: string
-          value: any
-          updated_at?: string | null
-        }
-        Update: {
-          key?: string
-          value?: any
-          updated_at?: string | null
         }
         Relationships: []
       }
