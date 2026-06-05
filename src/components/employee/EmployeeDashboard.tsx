@@ -169,7 +169,7 @@ export function EmployeeDashboard() {
       const todayStr = baghdadToday();
       const { data } = await (supabase as any)
         .from("exit_requests")
-        .select("id, status, reason_type, reviewed_at, attendance_event_id")
+        .select("id, status, reason_type, reviewed_at, reviewed_by, attendance_event_id")
         .eq("employee_id", user.id)
         .eq("status", "approved")
         .gte("requested_at", todayStr + "T00:00:00+03:00")
@@ -312,17 +312,24 @@ export function EmployeeDashboard() {
     setDuration("1h");
   };
 
-  const handleCheckBackIn = async () => {
-    if (!user || !approvedExitReq) return;
-    const exitReqId = approvedExitReq.id;
-    const managerId = approvedExitReq.reviewed_by;
-    try {
-      await attMutation.mutateAsync({ type: "in", rsn: "check_back_in" });
+  const checkBackInMutation = useMutation({
+    mutationFn: async () => {
+      if (!user || !approvedExitReq) return;
+      const exitReqId = approvedExitReq.id;
+      const managerId = approvedExitReq.reviewed_by;
 
-      await (supabase as any)
+      const { error: attError } = await supabase.from("attendance").insert({
+        user_id: user.id,
+        event_type: "in" as any,
+        reason: "check_back_in",
+      });
+      if (attError) throw attError;
+
+      const { error: reqError } = await (supabase as any)
         .from("exit_requests")
         .update({ status: "completed" })
         .eq("id", exitReqId);
+      if (reqError) throw reqError;
 
       if (managerId) {
         const { data: profile } = await supabase
@@ -330,22 +337,29 @@ export function EmployeeDashboard() {
           .select("full_name")
           .eq("id", user.id)
           .single();
-        await (supabase as any).from("notifications").insert({
+        const { error: notifError } = await (supabase as any).from("notifications").insert({
           user_id: managerId,
           type: "check_back_in",
           message: `${profile?.full_name || ""} ${t("check_back_in")}`,
           link_data: { route: "/dashboard" },
           is_read: false,
         });
+        if (notifError) console.error("Notification error:", notifError);
       }
-    } catch (err: any) {
-      toast.error(err?.message || t("error_generic"));
-    } finally {
-      queryClient.invalidateQueries({ queryKey: ["approved_exit_request", user.id] });
-      queryClient.invalidateQueries({ queryKey: ["pending_exit_request", user.id] });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["approved_exit_request", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["pending_exit_request", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["employeeDashboard", user?.id] });
-    }
-  };
+      toast.success(t("check_back_in"));
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || t("error_generic"));
+      queryClient.invalidateQueries({ queryKey: ["approved_exit_request", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["pending_exit_request", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["employeeDashboard", user?.id] });
+    },
+  });
 
   // Respond to manager query
   const respondToQuery = async (response: string) => {
@@ -602,15 +616,14 @@ export function EmployeeDashboard() {
             </Button>
           )}
 
-          {/* ---- BUTTON 3: Check-back-in (EXIT_APPROVED -> RETURNED) ---- */}
           {attState === "EXIT_APPROVED" && (
             <Button
               size="lg"
-              onClick={handleCheckBackIn}
-              disabled={attMutation.isPending}
+              onClick={() => checkBackInMutation.mutate()}
+              disabled={checkBackInMutation.isPending}
               className="text-lg min-w-[120px] min-h-[56px] bg-blue-500 hover:bg-blue-600 text-white transition-colors duration-300 px-10 py-7 shadow-md"
             >
-              {attMutation.isPending ? (
+              {checkBackInMutation.isPending ? (
                 <Loader2 className="h-5 w-5 animate-spin me-2" />
               ) : (
                 <CheckCheck className="h-5 w-5 me-2" />
