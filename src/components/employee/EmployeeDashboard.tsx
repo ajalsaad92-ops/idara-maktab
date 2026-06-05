@@ -249,11 +249,12 @@ export function EmployeeDashboard() {
 
   // End-day mutation: insert 'out' event with reason
   const endDayMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (customReason?: string) => {
+      const rsnVal = customReason || (endDayReason === t("exit_reason_other") ? endDayReasonOther : endDayReason) || "نهاية الدوام المعتاد";
       const { error } = await supabase.from("attendance").insert({
         user_id: user!.id,
         event_type: "out" as any,
-        reason: endDayReason === t("exit_reason_other") ? endDayReasonOther : endDayReason,
+        reason: rsnVal,
       });
       if (error) throw error;
     },
@@ -490,7 +491,7 @@ export function EmployeeDashboard() {
   const firstInEvent = today.find((e: any) => e.event_type === "in");
   const checkInTimeMs = firstInEvent ? new Date(firstInEvent.event_at).getTime() : null;
   const hoursSinceCheckIn = checkInTimeMs ? (Date.now() - checkInTimeMs) / 3_600_000 : 0;
-  const isEarlyEndDay = checkInTimeMs !== null && hoursSinceCheckIn < 2;
+  const isEarlyEndDay = checkInTimeMs !== null && hoursSinceCheckIn <= 2;
 
   // 2h reminder (only when in EXIT_APPROVED state)
   const showReminder = attState === "EXIT_APPROVED" && hours.outH > 2;
@@ -513,10 +514,90 @@ export function EmployeeDashboard() {
   /* ---------------------------------------------------------------- */
   /* Button enabled states                                             */
   /* ---------------------------------------------------------------- */
-  const btn1Enabled = attState === "NOT_CHECKED_IN";
-  const btn2Enabled = attState === "CHECKED_IN" || attState === "RETURNED";
+  const hasCheckedIn = today.some((e: any) => e.event_type === "in");
+  const hasEndedDay = today.some((e: any) => e.event_type === "out" && !e.exit_request_id);
+
+  const btn1Enabled = !hasCheckedIn;
+  const btn2Enabled = hasCheckedIn && !hasEndedDay && attState !== "EXIT_REQUESTED" && attState !== "EXIT_APPROVED";
   const btn3Enabled = attState === "EXIT_APPROVED";
-  const btn4Enabled = attState === "CHECKED_IN" || attState === "RETURNED";
+  const btn4Enabled = hasCheckedIn && !hasEndedDay;
+
+  const handleEndDayClick = () => {
+    if (isEarlyEndDay) {
+      setEndDayOpen(true);
+    } else {
+      if (window.confirm(t("confirm_end_day") || "هل أنت متأكد من إنهاء الدوام؟")) {
+        endDayMutation.mutate("نهاية الدوام المعتاد");
+      }
+    }
+  };
+
+  const attendanceLogs = useMemo(() => {
+    const logs: {
+      type: "check_in" | "exit" | "return" | "end_day";
+      time: string;
+      details?: string;
+      duration?: string;
+    }[] = [];
+
+    let lastInTime: number | null = null;
+    let lastOutTime: number | null = null;
+
+    today.forEach((event: any, index: number) => {
+      const timeStr = fmtTime(event.event_at);
+      if (event.event_type === "in") {
+        if (index === 0) {
+          logs.push({
+            type: "check_in",
+            time: timeStr,
+            details: t("check_in") || "بداية الدوام",
+          });
+        } else {
+          let durationStr = "";
+          if (lastOutTime) {
+            const diffMs = new Date(event.event_at).getTime() - lastOutTime;
+            durationStr = fmtHours(diffMs / 3600000);
+          }
+          logs.push({
+            type: "return",
+            time: timeStr,
+            details: t("check_back_in") || "تسجيل العودة",
+            duration: durationStr,
+          });
+        }
+        lastInTime = new Date(event.event_at).getTime();
+      } else if (event.event_type === "out") {
+        if (event.exit_request_id) {
+          let durationStr = "";
+          if (lastInTime) {
+            const diffMs = new Date(event.event_at).getTime() - lastInTime;
+            durationStr = fmtHours(diffMs / 3600000);
+          }
+          logs.push({
+            type: "exit",
+            time: timeStr,
+            details: event.reason || t("exit_request") || "خروج مؤقت",
+            duration: durationStr,
+          });
+          lastOutTime = new Date(event.event_at).getTime();
+        } else {
+          let durationStr = "";
+          if (lastInTime) {
+            const diffMs = new Date(event.event_at).getTime() - lastInTime;
+            durationStr = fmtHours(diffMs / 3600000);
+          }
+          logs.push({
+            type: "end_day",
+            time: timeStr,
+            details: event.reason || t("end_work_day") || "نهاية الدوام",
+            duration: durationStr,
+          });
+        }
+      }
+    });
+
+    return logs;
+  }, [today, t]);
 
   /* ---------------------------------------------------------------- */
   /* Render                                                            */
@@ -601,20 +682,20 @@ export function EmployeeDashboard() {
         </div>
 
         {/* ---- 4 Buttons: Always visible, side by side ---- */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-4 gap-1.5 sm:gap-3">
           {/* Button 1: Start Work (بداية الدوام) */}
           <Button
             size="lg"
             onClick={() => attMutation.mutate({ type: "in" })}
             disabled={!btn1Enabled || attMutation.isPending}
-            className="min-h-[56px] transition-all duration-300"
+            className="min-h-[50px] sm:min-h-[56px] px-1 sm:px-3 text-[10px] sm:text-xs md:text-sm transition-all duration-300 bg-emerald-600 hover:bg-emerald-500 text-white disabled:bg-slate-300/20 disabled:text-slate-500 disabled:opacity-50"
           >
             {attMutation.isPending ? (
-              <Loader2 className="h-5 w-5 animate-spin me-2" />
+              <Loader2 className="h-3.5 w-3.5 sm:h-5 sm:w-5 animate-spin me-1 sm:me-2 shrink-0" />
             ) : (
-              <LogIn className="h-5 w-5 me-2" />
+              <LogIn className="h-3.5 w-3.5 sm:h-5 sm:w-5 me-1 sm:me-2 shrink-0" />
             )}
-            {t("check_in")}
+            <span className="truncate">{t("check_in")}</span>
           </Button>
 
           {/* Button 2: Exit Request (طلب الخروج) */}
@@ -622,10 +703,10 @@ export function EmployeeDashboard() {
             size="lg"
             onClick={() => setExitDialogOpen(true)}
             disabled={!btn2Enabled}
-            className="min-h-[56px] transition-all duration-300"
+            className="min-h-[50px] sm:min-h-[56px] px-1 sm:px-3 text-[10px] sm:text-xs md:text-sm transition-all duration-300 bg-amber-600 hover:bg-amber-500 text-white disabled:bg-slate-300/20 disabled:text-slate-500 disabled:opacity-50"
           >
-            <LogOut className="h-5 w-5 me-2" />
-            {t("exit_request")}
+            <LogOut className="h-3.5 w-3.5 sm:h-5 sm:w-5 me-1 sm:me-2 shrink-0" />
+            <span className="truncate">{t("exit_request")}</span>
           </Button>
 
           {/* Button 3: Check-back-in (تسجيل العودة) */}
@@ -633,27 +714,51 @@ export function EmployeeDashboard() {
             size="lg"
             onClick={() => checkBackInMutation.mutate()}
             disabled={!btn3Enabled || checkBackInMutation.isPending}
-            className="min-h-[56px] transition-all duration-300"
+            className="min-h-[50px] sm:min-h-[56px] px-1 sm:px-3 text-[10px] sm:text-xs md:text-sm transition-all duration-300 bg-sky-600 hover:bg-sky-500 text-white disabled:bg-slate-300/20 disabled:text-slate-500 disabled:opacity-50"
           >
             {checkBackInMutation.isPending ? (
-              <Loader2 className="h-5 w-5 animate-spin me-2" />
+              <Loader2 className="h-3.5 w-3.5 sm:h-5 sm:w-5 animate-spin me-1 sm:me-2 shrink-0" />
             ) : (
-              <CheckCheck className="h-5 w-5 me-2" />
+              <CheckCheck className="h-3.5 w-3.5 sm:h-5 sm:w-5 me-1 sm:me-2 shrink-0" />
             )}
-            {t("check_back_in")}
+            <span className="truncate">{t("check_back_in")}</span>
           </Button>
 
           {/* Button 4: End Day (نهاية الدوام) */}
           <Button
             size="lg"
-            onClick={() => setEndDayOpen(true)}
+            onClick={handleEndDayClick}
             disabled={!btn4Enabled}
-            className="min-h-[56px] transition-all duration-300"
+            className="min-h-[50px] sm:min-h-[56px] px-1 sm:px-3 text-[10px] sm:text-xs md:text-sm transition-all duration-300 bg-rose-600 hover:bg-rose-500 text-white disabled:bg-slate-300/20 disabled:text-slate-500 disabled:opacity-50"
           >
-            <StopCircle className="h-5 w-5 me-2" />
-            {t("end_work_day")}
+            <StopCircle className="h-3.5 w-3.5 sm:h-5 sm:w-5 me-1 sm:me-2 shrink-0" />
+            <span className="truncate">{t("end_work_day")}</span>
           </Button>
         </div>
+
+        {/* Logs of the day */}
+        {attendanceLogs.length > 0 && (
+          <div className="mt-6 pt-4 border-t border-primary-foreground/20">
+            <h3 className="text-xs font-semibold uppercase tracking-wider opacity-75 mb-3">
+              {t("today_log") || "حركات اليوم"}
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+              {attendanceLogs.map((log, index) => (
+                <div key={index} className="flex justify-between items-center bg-primary-foreground/10 px-3 py-2 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold">{log.time}</span>
+                    <span className="opacity-90">{log.details}</span>
+                  </div>
+                  {log.duration && (
+                    <span className="bg-primary-foreground/20 px-2 py-0.5 rounded text-[10px]">
+                      {log.duration}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Stats */}
