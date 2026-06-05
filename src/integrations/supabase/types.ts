@@ -175,6 +175,7 @@ export type Database = {
           created_at: string
           id: string
           is_read: boolean
+          link_data: Json | null
           message: string
           related_task_id: string | null
           type: string
@@ -184,6 +185,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_read?: boolean
+          link_data?: Json | null
           message: string
           related_task_id?: string | null
           type: string
@@ -193,6 +195,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_read?: boolean
+          link_data?: Json | null
           message?: string
           related_task_id?: string | null
           type?: string
@@ -426,6 +429,45 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      role_permissions: {
+        Row: {
+          role: string
+          permission_key: string
+          is_granted: boolean
+          updated_at: string | null
+        }
+        Insert: {
+          role: string
+          permission_key: string
+          is_granted?: boolean
+          updated_at?: string | null
+        }
+        Update: {
+          role?: string
+          permission_key?: string
+          is_granted?: boolean
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      settings: {
+        Row: {
+          key: string
+          value: any
+          updated_at: string | null
+        }
+        Insert: {
+          key: string
+          value: any
+          updated_at?: string | null
+        }
+        Update: {
+          key?: string
+          value?: any
+          updated_at?: string | null
         }
         Relationships: []
       }
