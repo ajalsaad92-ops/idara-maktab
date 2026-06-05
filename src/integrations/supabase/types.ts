@@ -175,6 +175,7 @@ export type Database = {
           created_at: string
           id: string
           is_read: boolean
+          link_data: Json | null
           message: string
           related_task_id: string | null
           type: string
@@ -184,6 +185,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_read?: boolean
+          link_data?: Json | null
           message: string
           related_task_id?: string | null
           type: string
@@ -193,6 +195,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_read?: boolean
+          link_data?: Json | null
           message?: string
           related_task_id?: string | null
           type?: string
