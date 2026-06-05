@@ -312,13 +312,15 @@ export function EmployeeDashboard() {
     setDuration("1h");
   };
 
-  // Check-back-in mutation
+  // Check-back-in mutation — RLS blocks employees from updating exit_requests,
+  // so we only insert the 'in' attendance event and notify the manager (best-effort).
+  // The state machine detects "returned" by comparing last 'in' event time vs approval time.
   const checkBackInMutation = useMutation({
     mutationFn: async () => {
       if (!user || !approvedExitReq) return;
-      const exitReqId = approvedExitReq.id;
       const managerId = approvedExitReq.reviewed_by;
 
+      // 1. Insert 'in' attendance event (the critical operation)
       const { error: attError } = await supabase.from("attendance").insert({
         user_id: user.id,
         event_type: "in" as any,
@@ -326,34 +328,31 @@ export function EmployeeDashboard() {
       });
       if (attError) throw attError;
 
-      const { data: updated, error: reqError } = await (supabase as any)
-        .from("exit_requests")
-        .update({ status: "completed" })
-        .eq("id", exitReqId)
-        .select("id");
-      if (reqError) throw reqError;
-      if (!updated || updated.length === 0) throw new Error("exit_request_update_failed");
-
+      // 2. Notify manager (best-effort, don't block on failure)
       if (managerId) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("full_name")
-          .eq("id", user.id)
-          .single();
-        const { error: notifError } = await (supabase as any).from("notifications").insert({
-          user_id: managerId,
-          type: "check_back_in",
-          message: `${profile?.full_name || ""} ${t("check_back_in")}`,
-          link_data: { route: "/dashboard" },
-          is_read: false,
-        });
-        if (notifError) console.error("Notification error:", notifError);
+        try {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("full_name")
+            .eq("id", user.id)
+            .single();
+          await (supabase as any).from("notifications").insert({
+            user_id: managerId,
+            type: "check_back_in",
+            message: `${profile?.full_name || ""} ${t("check_back_in")}`,
+            link_data: { route: "/dashboard" },
+            is_read: false,
+          });
+        } catch (notifErr) {
+          console.error("Notification failed (non-critical):", notifErr);
+        }
       }
     },
     onSuccess: () => {
-      // Optimistic: immediately clear approvedExitReq
+      // Optimistic: set approvedExitReq to null so state machine
+      // no longer returns EXIT_APPROVED (avoids RLS refetch issue)
       queryClient.setQueryData(["approved_exit_request", user?.id], null);
-      // Optimistic: append the new 'in' event
+      // Optimistic: append the new 'in' event to dashboard cache
       queryClient.setQueryData(
         ["employeeDashboard", user?.id],
         (old: any) => {
@@ -374,12 +373,15 @@ export function EmployeeDashboard() {
           };
         }
       );
+      // Only invalidate dashboard + pending_exit_request (NOT approved_exit_request)
+      // to prevent refetch from overriding our optimistic null
       queryClient.invalidateQueries({ queryKey: ["pending_exit_request", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["employeeDashboard", user?.id] });
       toast.success(t("check_back_in"));
     },
     onError: (err: any) => {
       toast.error(err?.message || t("error_generic"));
+      // On failure, invalidate all queries to recover
       queryClient.invalidateQueries({ queryKey: ["approved_exit_request", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["pending_exit_request", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["employeeDashboard", user?.id] });
@@ -423,34 +425,25 @@ export function EmployeeDashboard() {
   const tasks = data?.tasks ?? [];
   const lastEvent = today[today.length - 1];
 
-  // 6-state machine
   const attState: AttState = (() => {
     if (today.length === 0) return "NOT_CHECKED_IN";
 
     const lastType = lastEvent?.event_type as string;
 
-    // PRIORITY 1: Approved exit request - employee is out, waiting for check-back-in
-    if (approvedExitReq && approvedExitReq.status === "approved") {
-      return "EXIT_APPROVED";
+    if (approvedExitReq?.status === "approved") {
+      const approvalTime = new Date(approvedExitReq.reviewed_at).getTime();
+      const lastInEvent = [...today].reverse().find((e: any) => e.event_type === "in");
+      const hasReturned = lastInEvent && new Date(lastInEvent.event_at).getTime() > approvalTime;
+      if (!hasReturned) return "EXIT_APPROVED";
     }
 
-    // PRIORITY 2: Pending exit request - waiting for manager review
-    if (pendingExitReq && pendingExitReq.status === "pending") {
-      return "EXIT_REQUESTED";
-    }
+    if (pendingExitReq?.status === "pending") return "EXIT_REQUESTED";
 
-    // PRIORITY 3: Last event is 'out' and no pending exit = day ended
-    if (lastType === "out" && today.length >= 2) {
-      return "DAY_ENDED";
-    }
+    if (lastType === "out" && today.length >= 2) return "DAY_ENDED";
 
-    // PRIORITY 4: Last event is 'in'
     if (lastType === "in") {
       const outBefore = today.findIndex((e: any) => e.event_type === "out");
-      const lastInIndex = today.length - 1;
-      if (outBefore >= 0 && outBefore < lastInIndex) {
-        return "RETURNED";
-      }
+      if (outBefore >= 0 && outBefore < today.length - 1) return "RETURNED";
       return "CHECKED_IN";
     }
 
