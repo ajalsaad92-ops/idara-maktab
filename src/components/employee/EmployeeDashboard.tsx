@@ -312,36 +312,39 @@ export function EmployeeDashboard() {
     setDuration("1h");
   };
 
-  // Check-back-in after approval: notify manager
   const handleCheckBackIn = async () => {
     if (!user || !approvedExitReq) return;
+    const exitReqId = approvedExitReq.id;
+    const managerId = approvedExitReq.reviewed_by;
+    try {
+      await attMutation.mutateAsync({ type: "in", rsn: "check_back_in" });
 
-    // Insert attendance 'in' event
-    await attMutation.mutateAsync({ type: "in", rsn: "check_back_in" });
+      await (supabase as any)
+        .from("exit_requests")
+        .update({ status: "completed" })
+        .eq("id", exitReqId);
 
-    // Mark exit request as completed
-    await (supabase as any)
-      .from("exit_requests")
-      .update({ status: "completed" })
-      .eq("id", approvedExitReq.id);
-
-    // Notify manager who approved
-    if (approvedExitReq.reviewed_by) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("id", user.id)
-        .single();
-      await (supabase as any).from("notifications").insert({
-        user_id: approvedExitReq.reviewed_by,
-        type: "check_back_in",
-        message: `${profile?.full_name || ""} ${t("check_back_in")}`,
-        link_data: { route: "/dashboard" },
-        is_read: false,
-      });
+      if (managerId) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", user.id)
+          .single();
+        await (supabase as any).from("notifications").insert({
+          user_id: managerId,
+          type: "check_back_in",
+          message: `${profile?.full_name || ""} ${t("check_back_in")}`,
+          link_data: { route: "/dashboard" },
+          is_read: false,
+        });
+      }
+    } catch (err: any) {
+      toast.error(err?.message || t("error_generic"));
+    } finally {
+      queryClient.invalidateQueries({ queryKey: ["approved_exit_request", user.id] });
+      queryClient.invalidateQueries({ queryKey: ["pending_exit_request", user.id] });
+      queryClient.invalidateQueries({ queryKey: ["employeeDashboard", user?.id] });
     }
-
-    queryClient.invalidateQueries({ queryKey: ["approved_exit_request", user.id] });
   };
 
   // Respond to manager query
@@ -387,31 +390,25 @@ export function EmployeeDashboard() {
 
     const lastType = lastEvent?.event_type as string;
 
-    // If last event is 'out', day has ended
-    if (lastType === "out" && today.length >= 2) {
-      // Check if there's a completed exit request (day ended) vs approved exit
-      const hasCheckedBackIn = today.some(
-        (e: any, i: number) => i > 0 && e.event_type === "in"
-      );
-      if (!hasCheckedBackIn && today.length >= 2) {
-        // Last event is 'out' with no check-back-in = day ended
-        return "DAY_ENDED";
-      }
-    }
-
-    // Check for approved exit request (waiting for check-back-in)
+    // PRIORITY 1: Approved exit request — employee is out, waiting for check-back-in
+    // Must check BEFORE DAY_ENDED because manager approval creates an 'out' event
     if (approvedExitReq && approvedExitReq.status === "approved") {
       return "EXIT_APPROVED";
     }
 
-    // Check for pending exit request
+    // PRIORITY 2: Pending exit request — waiting for manager review
     if (pendingExitReq && pendingExitReq.status === "pending") {
       return "EXIT_REQUESTED";
     }
 
-    // If last event is 'in' and we have at least one 'in' event after an 'out' event
+    // PRIORITY 3: Last event is 'out' and no pending exit = day ended
+    if (lastType === "out" && today.length >= 2) {
+      return "DAY_ENDED";
+    }
+
+    // PRIORITY 4: Last event is 'in'
     if (lastType === "in") {
-      // Check if there were any 'out' events before this 'in'
+      // Check if there were any 'out' events before this 'in' = returned from exit
       const outBefore = today.findIndex((e: any) => e.event_type === "out");
       const lastInIndex = today.length - 1;
       if (outBefore >= 0 && outBefore < lastInIndex) {
@@ -420,7 +417,6 @@ export function EmployeeDashboard() {
       return "CHECKED_IN";
     }
 
-    // lastType === 'out' with approved exit but no approvedExitReq caught above
     return "CHECKED_IN";
   })();
 
@@ -623,12 +619,18 @@ export function EmployeeDashboard() {
             </Button>
           )}
 
-          {/* ---- RETURNED state display ---- */}
+          {/* ---- RETURNED state: show status + exit request + end day ---- */}
           {attState === "RETURNED" && (
-            <Badge className="text-lg px-4 py-2 bg-success/20 text-success-foreground">
-              <CheckCheck className="h-5 w-5 me-2" />
-              {t("check_back_in")}
-            </Badge>
+            <div className="flex gap-2">
+              <Button
+                size="lg"
+                onClick={() => setExitDialogOpen(true)}
+                className="text-lg min-w-[120px] min-h-[56px] bg-warning hover:bg-warning/90 text-warning-foreground transition-colors duration-300 px-10 py-7 shadow-md"
+              >
+                <LogOut className="h-5 w-5 me-2" />
+                {t("exit_request")}
+              </Button>
+            </div>
           )}
 
           {/* ---- DAY_ENDED: show summary ---- */}
