@@ -348,6 +348,30 @@ export function EmployeeDashboard() {
       }
     },
     onSuccess: () => {
+      // Optimistic: immediately clear approvedExitReq so state machine transitions out of EXIT_APPROVED
+      queryClient.setQueryData(["approved_exit_request", user?.id], null);
+      // Optimistic: append the new 'in' event so state machine computes RETURNED (not DAY_ENDED)
+      queryClient.setQueryData(
+        ["employeeDashboard", user?.id],
+        (old: any) => {
+          if (!old) return old;
+          return {
+            ...old,
+            today: [
+              ...old.today,
+              {
+                id: `optimistic-${Date.now()}`,
+                user_id: user!.id,
+                event_type: "in",
+                reason: "check_back_in",
+                event_at: new Date().toISOString(),
+                event_date: baghdadToday(),
+              },
+            ],
+          };
+        }
+      );
+      // Background refetch for DB consistency
       queryClient.invalidateQueries({ queryKey: ["approved_exit_request", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["pending_exit_request", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["employeeDashboard", user?.id] });
