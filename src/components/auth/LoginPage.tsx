@@ -78,6 +78,31 @@ export function LoginPage() {
             </Button>
           </form>
 
+          <div className="mt-6 pt-6 border-t">
+            <p className="text-xs text-muted-foreground mb-2 font-semibold">
+              {lang === "ar" ? "حسابات تجريبية (للتطوير)" : "Test accounts (dev)"}:
+            </p>
+            <div className="space-y-1 text-xs">
+              {[
+                { e: "admin@test.com", p: "Admin1234", label: lang === "ar" ? "مدير النظام" : "Admin" },
+                { e: "manager@test.com", p: "Manager1234", label: lang === "ar" ? "مدير" : "Manager" },
+                { e: "employee@test.com", p: "Employee1234", label: lang === "ar" ? "موظف" : "Employee" },
+              ].map((a) => (
+                <button
+                  type="button"
+                  key={a.e}
+                  onClick={() => {
+                    setEmail(a.e);
+                    setPassword(a.p);
+                  }}
+                  className="w-full text-start flex justify-between items-center px-2 py-1.5 rounded hover:bg-accent transition"
+                >
+                  <span className="font-medium">{a.label}</span>
+                  <span dir="ltr" className="text-muted-foreground">{a.e}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </Card>
       </div>
     </div>
