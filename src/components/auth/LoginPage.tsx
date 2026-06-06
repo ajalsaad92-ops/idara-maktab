@@ -78,37 +78,6 @@ export function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-6 pt-6 border-t">
-            <p className="text-xs text-muted-foreground mb-2 font-semibold">{t("test_accounts")}:</p>
-            <div className="space-y-1 text-xs">
-              {[
-                { e: "admin@test.com", p: "Admin1234", label: t("role_admin") },
-                { e: "manager@test.com", p: "Manager1234", label: t("role_manager") },
-                { e: "employee@test.com", p: "Employee1234", label: t("role_employee") },
-              ].map((a) => (
-                <button
-                  type="button"
-                  key={a.e}
-                  onClick={() => quickFill(a.e, a.p)}
-                  className="w-full text-start flex justify-between items-center px-2 py-1.5 rounded hover:bg-accent transition"
-                >
-                  <span className="font-medium">{a.label}</span>
-                  <span dir="ltr" className="text-muted-foreground">{a.e}</span>
-                </button>
-              ))}
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="w-full mt-3"
-              onClick={runSeed}
-              disabled={seeding}
-            >
-              {seeding && <Loader2 className="h-4 w-4 animate-spin me-2" />}
-              {t("seed")}
-            </Button>
-          </div>
         </Card>
       </div>
     </div>
