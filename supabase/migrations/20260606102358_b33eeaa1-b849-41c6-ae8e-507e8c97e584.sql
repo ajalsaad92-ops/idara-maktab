@@ -17,8 +17,8 @@ BEGIN
     RAISE EXCEPTION 'Permission denied';
   END IF;
 
-  SELECT MIN(event_at) FILTER (WHERE event_type = 'check_in'),
-         MAX(event_at) FILTER (WHERE event_type = 'check_out')
+  SELECT MIN(event_at) FILTER (WHERE event_type = 'in'),
+         MAX(event_at) FILTER (WHERE event_type IN ('out', 'out_final'))
     INTO v_in, v_out
   FROM public.attendance
   WHERE attendance.user_id = p_user_id AND event_date = p_date;
@@ -31,7 +31,7 @@ BEGIN
   FROM public.tasks t
   JOIN public.task_assignments ta ON ta.task_id = t.id
   WHERE ta.user_id = p_user_id
-    AND t.status = 'done'
+    AND t.status = 'completed'
     AND t.updated_at::date = p_date;
 
   v_score := LEAST(100, (v_hours * 10) + (v_tasks * 15));

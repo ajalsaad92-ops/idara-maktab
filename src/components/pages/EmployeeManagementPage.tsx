@@ -88,9 +88,18 @@ export function EmployeeManagementPage() {
   const { data: profiles, isLoading } = useQuery({
     queryKey: ["profiles"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from("profiles").select("*");
-      if (error) throw error;
-      return data as ProfileRow[];
+      const { data: profilesData, error: profilesError } = await (supabase as any).from("profiles").select("*");
+      if (profilesError) throw profilesError;
+      const { data: rolesData, error: rolesError } = await (supabase as any).from("user_roles").select("user_id, role");
+      if (rolesError) throw rolesError;
+
+      return (profilesData || []).map((p: any) => {
+        const r = (rolesData || []).find((x: any) => x.user_id === p.id);
+        return {
+          ...p,
+          role: r?.role ?? "employee"
+        };
+      }) as ProfileRow[];
     },
     staleTime: 60_000,
   });
@@ -165,19 +174,19 @@ export function EmployeeManagementPage() {
     }
     setEditing(true);
     try {
-      const { error } = await (supabase as any).from("profiles").update({
-        full_name: editForm.full_name,
-        role: editForm.role,
-        department_id: editForm.department_id || null,
-        phone: editForm.phone || null,
-      }).eq("id", editId);
-      if (error) throw error;
-
-      // Update role in user_roles
-      await (supabase as any).from("user_roles").upsert({
-        user_id: editId,
-        role: editForm.role,
-      }, { onConflict: "user_id,role" });
+      if (role !== "admin") {
+        throw new Error("Only admins can edit employees");
+      }
+      const { updateEmployee } = await import("@/lib/admin.functions");
+      await updateEmployee({
+        data: {
+          id: editId!,
+          full_name: editForm.full_name,
+          role: editForm.role as "admin" | "manager" | "employee",
+          department_id: editForm.department_id || null,
+          phone: editForm.phone || null,
+        }
+      });
 
       toast.success(t("employee_updated") || "تم تحديث بيانات الموظف");
       setEditOpen(false);
@@ -201,19 +210,25 @@ export function EmployeeManagementPage() {
       toast.error(t("password_mismatch") || "كلمات المرور غير متطابقة");
       return;
     }
-    if (passId !== user?.id) {
-      toast.error(t("password_reset_requires_admin") || "تغيير كلمة المرور يتطلب صلاحية المدير العام. يرجى استخدام Supabase Dashboard.");
-      return;
-    }
     setPassing(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password: passForm.password });
-      if (error) {
-        toast.error(error.message);
+      if (passId === user?.id) {
+        const { error } = await supabase.auth.updateUser({ password: passForm.password });
+        if (error) throw error;
       } else {
-        toast.success(t("password_reset_success") || "تم تغيير كلمة المرور");
-        setPassOpen(false);
+        if (role !== "admin") {
+          throw new Error("تغيير كلمة مرور موظف آخر يتطلب صلاحية المدير العام");
+        }
+        const { resetEmployeePassword } = await import("@/lib/admin.functions");
+        await resetEmployeePassword({
+          data: {
+            userId: passId!,
+            password: passForm.password,
+          }
+        });
       }
+      toast.success(t("password_reset_success") || "تم تغيير كلمة المرور");
+      setPassOpen(false);
     } catch (err: any) {
       toast.error(err.message);
     } finally {

@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS public.manager_queries (
     status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'answered')),
     employee_response TEXT,
     answered_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
 -- Grants
