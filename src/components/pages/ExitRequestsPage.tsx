@@ -15,9 +15,9 @@ export function ExitRequestsPage() {
   const { t } = useI18n();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [reviewNote, setReviewNote] = useState("");
+  const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
   const [rejectingId, setRejectingId] = useState<string | null>(null);
-  const [rejectNote, setRejectNote] = useState("");
+  const [rejectNotes, setRejectNotes] = useState<Record<string, string>>({});
 
   const { data: requests, isLoading, refetch } = useQuery({
     queryKey: ["exit_requests"],
@@ -52,10 +52,11 @@ export function ExitRequestsPage() {
   const handleApprove = async (req: any) => {
     const now = new Date();
     const today = now.toISOString().split("T")[0];
+    const reqNote = reviewNotes[req.id] || "";
 
     const { error: reqError } = await (supabase as any)
       .from("exit_requests")
-      .update({ status: "approved", reviewed_by: user?.id, reviewed_at: now.toISOString(), reviewer_note: reviewNote })
+      .update({ status: "approved", reviewed_by: user?.id, reviewed_at: now.toISOString(), reviewer_note: reqNote })
       .eq("id", req.id);
     if (reqError) {
       toast.error(reqError.message);
@@ -92,16 +93,21 @@ export function ExitRequestsPage() {
     });
 
     toast.success(t("approved") || "تمت الموافقة");
-    setReviewNote("");
+    setReviewNotes((prev) => {
+      const copy = { ...prev };
+      delete copy[req.id];
+      return copy;
+    });
     refetch();
   };
 
   const handleReject = async (req: any) => {
     const now = new Date();
+    const reqNote = rejectNotes[req.id] || "";
 
     const { error: reqError } = await (supabase as any)
       .from("exit_requests")
-      .update({ status: "rejected", reviewed_by: user?.id, reviewed_at: now.toISOString(), reviewer_note: rejectNote })
+      .update({ status: "rejected", reviewed_by: user?.id, reviewed_at: now.toISOString(), reviewer_note: reqNote })
       .eq("id", req.id);
     if (reqError) {
       toast.error(reqError.message);
@@ -111,14 +117,18 @@ export function ExitRequestsPage() {
     await (supabase as any).from("notifications").insert({
       user_id: req.employee_id,
       type: "exit_rejected",
-      message: (t("exit_rejected_msg") || "تم رفض طلب خروجك ❌") + (rejectNote ? ` — ${rejectNote}` : ""),
+      message: (t("exit_rejected_msg") || "تم رفض طلب خروجك ❌") + (reqNote ? ` — ${reqNote}` : ""),
       link_data: { route: "/dashboard" },
       is_read: false,
     });
 
     toast.success(t("rejected") || "تم الرفض");
     setRejectingId(null);
-    setRejectNote("");
+    setRejectNotes((prev) => {
+      const copy = { ...prev };
+      delete copy[req.id];
+      return copy;
+    });
     refetch();
   };
 
@@ -170,8 +180,8 @@ export function ExitRequestsPage() {
                       <div className="space-y-2">
                         <Input
                           placeholder={t("rejection_reason") || "سبب الرفض"}
-                          value={rejectNote}
-                          onChange={(e) => setRejectNote(e.target.value)}
+                          value={rejectNotes[req.id] || ""}
+                          onChange={(e) => setRejectNotes({ ...rejectNotes, [req.id]: e.target.value })}
                           className="w-48"
                         />
                         <div className="flex gap-2">
@@ -179,7 +189,14 @@ export function ExitRequestsPage() {
                             <XCircle className="h-4 w-4 me-1" />
                             {t("confirm_reject") || "تأكيد الرفض"}
                           </Button>
-                          <Button size="sm" variant="outline" onClick={() => { setRejectingId(null); setRejectNote(""); }}>
+                          <Button size="sm" variant="outline" onClick={() => {
+                            setRejectingId(null);
+                            setRejectNotes((prev) => {
+                              const copy = { ...prev };
+                              delete copy[req.id];
+                              return copy;
+                            });
+                          }}>
                             {t("cancel") || "إلغاء"}
                           </Button>
                         </div>
@@ -188,8 +205,8 @@ export function ExitRequestsPage() {
                       <>
                         <Input
                           placeholder={t("reviewer_note") || "ملاحظة"}
-                          value={reviewNote}
-                          onChange={(e) => setReviewNote(e.target.value)}
+                          value={reviewNotes[req.id] || ""}
+                          onChange={(e) => setReviewNotes({ ...reviewNotes, [req.id]: e.target.value })}
                           className="w-48"
                         />
                         <div className="flex gap-2">

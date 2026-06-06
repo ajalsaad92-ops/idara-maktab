@@ -41,7 +41,7 @@ const ROLES = [
 
 export function EmployeeManagementPage() {
   const { t } = useI18n();
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const { openEmployeeDrawer } = useEmployeeDrawer();
   const queryClient = useQueryClient();
 
@@ -215,13 +215,15 @@ export function EmployeeManagementPage() {
       toast.error(t("password_mismatch") || "كلمات المرور غير متطابقة");
       return;
     }
+    if (passId !== user?.id) {
+      toast.error(t("password_reset_requires_admin") || "تغيير كلمة المرور يتطلب صلاحية المدير العام. يرجى استخدام Supabase Dashboard.");
+      return;
+    }
     setPassing(true);
     try {
       const { error } = await supabase.auth.updateUser({ password: passForm.password });
       if (error) {
-        // For admin resetting another user, this won't work from client-side
-        // We'd need an edge function, so show a helpful message
-        toast.error(t("password_reset_requires_admin") || "تغيير كلمة المرور يتطلب صلاحية المدير العام. يرجى استخدام Supabase Dashboard.");
+        toast.error(error.message);
       } else {
         toast.success(t("password_reset_success") || "تم تغيير كلمة المرور");
         setPassOpen(false);

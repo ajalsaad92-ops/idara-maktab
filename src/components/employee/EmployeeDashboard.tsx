@@ -253,7 +253,7 @@ export function EmployeeDashboard() {
       const rsnVal = customReason || (endDayReason === t("exit_reason_other") ? endDayReasonOther : endDayReason) || "نهاية الدوام المعتاد";
       const { error } = await supabase.from("attendance").insert({
         user_id: user!.id,
-        event_type: "out" as any,
+        event_type: "out_final" as any,
         reason: rsnVal,
       });
       if (error) throw error;
@@ -440,7 +440,7 @@ export function EmployeeDashboard() {
 
     if (pendingExitReq?.status === "pending") return "EXIT_REQUESTED";
 
-    if (lastType === "out" && today.length >= 2) return "DAY_ENDED";
+    if ((lastType === "out_final" || lastType === "out") && today.length >= 2) return "DAY_ENDED";
 
     if (lastType === "in") {
       const outBefore = today.findIndex((e: any) => e.event_type === "out");
@@ -515,7 +515,7 @@ export function EmployeeDashboard() {
   /* Button enabled states                                             */
   /* ---------------------------------------------------------------- */
   const hasCheckedIn = today.some((e: any) => e.event_type === "in");
-  const hasEndedDay = today.some((e: any) => e.event_type === "out" && !e.exit_request_id);
+  const hasEndedDay = today.some((e: any) => e.event_type === "out_final" || (e.event_type === "out" && !e.exit_request_id));
 
   const btn1Enabled = !hasCheckedIn;
   const btn2Enabled = hasCheckedIn && !hasEndedDay && attState !== "EXIT_REQUESTED" && attState !== "EXIT_APPROVED";
@@ -978,7 +978,7 @@ export function EmployeeDashboard() {
                   toast.error(t("select_reason"));
                   return;
                 }
-                endDayMutation.mutate();
+                endDayMutation.mutate(undefined);
                 setEndDayOpen(false);
               }}
               disabled={!endDayReason || endDayMutation.isPending}
