@@ -15,7 +15,6 @@ export function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [seeding, setSeeding] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,24 +22,6 @@ export function LoginPage() {
     const res = await signIn(email, password);
     setLoading(false);
     if (res.error) toast.error(res.error);
-  };
-
-  const quickFill = (e: string, p: string) => {
-    setEmail(e);
-    setPassword(p);
-  };
-
-  const runSeed = async () => {
-    setSeeding(true);
-    try {
-      const res = await fetch("/api/public/seed", { method: "POST" });
-      if (!res.ok) throw new Error(await res.text());
-      toast.success(lang === "ar" ? "تم إنشاء البيانات التجريبية" : "Demo data seeded");
-    } catch (err: any) {
-      toast.error(err.message);
-    } finally {
-      setSeeding(false);
-    }
   };
 
   return (
