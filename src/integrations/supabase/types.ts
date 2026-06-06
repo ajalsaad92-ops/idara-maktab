@@ -476,6 +476,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_productivity_score: {
+        Args: { p_date: string; p_user_id: string }
+        Returns: {
+          attendance_hours: number
+          score: number
+          tasks_completed: number
+          user_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
