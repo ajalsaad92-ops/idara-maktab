@@ -430,6 +430,8 @@ export function EmployeeDashboard() {
     if (today.length === 0) return "NOT_CHECKED_IN";
 
     const lastType = lastEvent?.event_type as string;
+    const hasEndedDayLocal = today.some((e: any) => e.event_type === "out_final" || (e.event_type === "out" && !e.exit_request_id));
+    if (hasEndedDayLocal) return "DAY_ENDED";
 
     if (approvedExitReq?.status === "approved") {
       const approvalTime = new Date(approvedExitReq.reviewed_at).getTime();
