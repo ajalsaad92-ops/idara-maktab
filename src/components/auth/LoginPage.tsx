@@ -10,6 +10,7 @@ import { Building2, Globe, Loader2 } from "lucide-react";
 
 export function LoginPage() {
   const { t, lang, setLang } = useI18n();
+  void lang;
   const { signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
