@@ -37,7 +37,7 @@ export function TaskAttachments({ taskId }: { taskId: string }) {
   const [loading, setLoading] = useState(true);
 
   const loadFiles = async () => {
-    const { data } = await (supabase as any)
+    const { data } = await supabase
       .from("task_attachments")
       .select("*, profiles(uploaded_by:full_name)")
       .eq("task_id", taskId)
@@ -79,7 +79,7 @@ export function TaskAttachments({ taskId }: { taskId: string }) {
         continue;
       }
 
-      const { error: dbError } = await (supabase as any).from("task_attachments").insert({
+      const { error: dbError } = await supabase.from("task_attachments").insert({
         task_id: taskId,
         uploaded_by: user.id,
         file_name: file.name,
@@ -129,7 +129,7 @@ export function TaskAttachments({ taskId }: { taskId: string }) {
   };
 
   const deleteFile = async (fileId: string, filePath: string) => {
-    const { error } = await (supabase as any).from("task_attachments").delete().eq("id", fileId);
+    const { error } = await supabase.from("task_attachments").delete().eq("id", fileId);
     if (error) {
       toast.error(error.message);
       return;

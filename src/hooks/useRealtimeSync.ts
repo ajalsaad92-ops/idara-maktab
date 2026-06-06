@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
@@ -7,7 +7,13 @@ import { toast } from "sonner";
 export function useRealtimeSync() {
   const queryClient = useQueryClient();
   const [isConnected, setIsConnected] = useState(false);
-  const { t, lang } = useI18n();
+  const { lang } = useI18n();
+  const langRef = useRef(lang);
+
+  // Keep langRef current without triggering re-renders
+  useEffect(() => {
+    langRef.current = lang;
+  }, [lang]);
 
   useEffect(() => {
     let reconnectToastId: string | number | null = null;
@@ -92,7 +98,7 @@ export function useRealtimeSync() {
         } else if (status === "CLOSED" || status === "CHANNEL_ERROR") {
           setIsConnected(false);
           if (!reconnectToastId) {
-            const msg = lang === "ar" ? "جاري إعادة الاتصال..." : "Reconnecting...";
+            const msg = langRef.current === "ar" ? "جاري إعادة الاتصال..." : "Reconnecting...";
             reconnectToastId = toast.loading(msg, { duration: Infinity });
           }
         }
@@ -102,7 +108,7 @@ export function useRealtimeSync() {
       supabase.removeChannel(channel);
       if (reconnectToastId) toast.dismiss(reconnectToastId);
     };
-  }, [queryClient, lang]);
+  }, [queryClient]);
 
   return { isConnected };
 }

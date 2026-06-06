@@ -66,7 +66,15 @@ export function TasksPage() {
     staleTime: 60_000,
   });
 
-  const filteredTasks = (tasks ?? []).filter((t: any) => !searchQuery || t.title?.includes(searchQuery));
+  const filteredTasks = (tasks ?? []).filter((t: any) => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      t.title?.toLowerCase().includes(q) ||
+      t.description?.toLowerCase().includes(q) ||
+      t.status?.toLowerCase().includes(q)
+    );
+  });
   const profilesMap = Object.fromEntries((profiles ?? []).map((p: any) => [p.id, p]));
 
   const invalidate = () => {

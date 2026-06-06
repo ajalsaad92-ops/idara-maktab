@@ -76,7 +76,7 @@ export function AttendancePage() {
   const { data: departments } = useQuery({
     queryKey: ["departments"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from("departments").select("id, name_ar, name_en");
+      const { data, error } = await supabase.from("departments").select("id, name_ar, name_en");
       if (error) throw error;
       return data;
     },

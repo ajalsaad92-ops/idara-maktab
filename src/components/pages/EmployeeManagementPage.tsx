@@ -78,7 +78,7 @@ export function EmployeeManagementPage() {
   const { data: departments } = useQuery({
     queryKey: ["departments"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from("departments").select("id, name_ar, name_en");
+      const { data, error } = await supabase.from("departments").select("id, name_ar, name_en");
       if (error) throw error;
       return data;
     },
@@ -88,9 +88,9 @@ export function EmployeeManagementPage() {
   const { data: profiles, isLoading } = useQuery({
     queryKey: ["profiles"],
     queryFn: async () => {
-      const { data: profilesData, error: profilesError } = await (supabase as any).from("profiles").select("*");
+      const { data: profilesData, error: profilesError } = await supabase.from("profiles").select("*");
       if (profilesError) throw profilesError;
-      const { data: rolesData, error: rolesError } = await (supabase as any).from("user_roles").select("user_id, role");
+      const { data: rolesData, error: rolesError } = await supabase.from("user_roles").select("user_id, role");
       if (rolesError) throw rolesError;
 
       return (profilesData || []).map((p: any) => {
@@ -239,7 +239,7 @@ export function EmployeeManagementPage() {
   // TOGGLE ACTIVE
   const toggleActive = useMutation({
     mutationFn: async ({ id, current }: { id: string; current: boolean }) => {
-      const { error } = await (supabase as any).from("profiles").update({ is_active: !current }).eq("id", id);
+      const { error } = await supabase.from("profiles").update({ is_active: !current }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -254,7 +254,7 @@ export function EmployeeManagementPage() {
     if (!deleteId) return;
     setDeleting(true);
     try {
-      const { error } = await (supabase as any).from("profiles").update({ is_active: false }).eq("id", deleteId);
+      const { error } = await supabase.from("profiles").update({ is_active: false }).eq("id", deleteId);
       if (error) throw error;
       toast.success(t("employee_deactivated") || "تم تعطيل الحساب");
       setDeleteId(null);
@@ -411,6 +411,16 @@ export function EmployeeManagementPage() {
                     </Button>
                     <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => openEdit(p)} title={t("edit") || "تعديل"}>
                       <Pencil className="h-3 w-3" />
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => openPassReset(p.id)} title={t("change_password") || "تغيير كلمة المرور"}>
+                      <KeyRound className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      size="sm" variant="ghost" className="h-6 w-6 p-0"
+                      onClick={() => toggleActive.mutate({ id: p.id, current: p.is_active !== false })}
+                      title={p.is_active !== false ? (t("disable") || "تعطيل") : (t("enable") || "تفعيل")}
+                    >
+                      {p.is_active !== false ? <Ban className="h-3 w-3 text-destructive" /> : <CheckCircle className="h-3 w-3 text-success" />}
                     </Button>
                     {role === "admin" && (
                       <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => setDeleteId(p.id)} title={t("delete") || "حذف"}>

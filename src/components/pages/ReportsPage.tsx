@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FileText, Printer } from "lucide-react";
+import { toast } from "sonner";
 
 function ReportsPageComponent() {
   const { t } = useI18n();
@@ -50,12 +51,41 @@ function ReportsPageComponent() {
 
   const handlePrint = () => {
     const printContent = document.getElementById("printable-report");
-    if (!printContent) return;
-    const originalBody = document.body.innerHTML;
-    document.body.innerHTML = printContent.innerHTML;
-    window.print();
-    document.body.innerHTML = originalBody;
-    window.location.reload();
+    if (!printContent) {
+      toast.error("محتوى التقرير غير موجود");
+      return;
+    }
+    // Open a new window for printing to avoid destroying React DOM
+    const printWindow = window.open("", "_blank", "width=800,height=600");
+    if (!printWindow) {
+      toast.error("فشل فتح نافذة الطباعة. تحقق من إعدادات مانع النوافذ المنبثقة.");
+      return;
+    }
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="UTF-8">
+        <title>${t("reports") || "التقارير"}</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; direction: rtl; }
+          .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px; }
+          .card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; text-align: center; }
+          .card-label { font-size: 12px; color: #64748b; margin-bottom: 8px; }
+          .card-value { font-size: 24px; font-weight: bold; color: #1e293b; }
+          .empty-state { text-align: center; padding: 40px; color: #64748b; }
+          @media print { .no-print { display: none !important; } }
+        </style>
+      </head>
+      <body>
+        ${printContent.innerHTML}
+        <script>
+          window.onload = function() { window.print(); window.onafterprint = function() { window.close(); }; };
+        </script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   return (

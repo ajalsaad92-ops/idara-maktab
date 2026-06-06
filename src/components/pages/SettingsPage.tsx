@@ -79,7 +79,7 @@ export function SettingsPage() {
   const { data: settings } = useQuery({
     queryKey: ["settings"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from("settings").select("*");
+      const { data, error } = await supabase.from("settings").select("*");
       if (error) throw error;
       return data;
     },
@@ -90,11 +90,12 @@ export function SettingsPage() {
   useEffect(() => {
     if (!settings) return;
     for (const s of settings) {
-      if (s.key === "org_name" && s.value?.text) setOrgName(s.value.text);
-      if (s.key === "work_start" && s.value?.text) setWorkStart(s.value.text);
-      if (s.key === "work_end" && s.value?.text) setWorkEnd(s.value.text);
-      if (s.key === "max_exit_hours" && s.value?.number) setMaxExitHours(String(s.value.number));
-      if (s.key === "notification_config" && s.value) setNotifications(s.value);
+      const v = s.value as { text?: string; number?: number; task_assigned?: boolean; task_commented?: boolean; check_in_reminder?: boolean } | undefined;
+      if (s.key === "org_name" && v?.text) setOrgName(v.text);
+      if (s.key === "work_start" && v?.text) setWorkStart(v.text);
+      if (s.key === "work_end" && v?.text) setWorkEnd(v.text);
+      if (s.key === "max_exit_hours" && v?.number) setMaxExitHours(String(v.number));
+      if (s.key === "notification_config" && v && typeof v === "object") setNotifications(v as { task_assigned: boolean; task_commented: boolean; check_in_reminder: boolean });
     }
   }, [settings]);
 
@@ -102,7 +103,7 @@ export function SettingsPage() {
   const { data: permData, isLoading: permLoading } = useQuery({
     queryKey: ["role_permissions"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from("role_permissions").select("*");
+      const { data, error } = await supabase.from("role_permissions").select("*");
       if (error) throw error;
       return data as PermRow[];
     },
@@ -141,7 +142,7 @@ export function SettingsPage() {
       [roleKey]: { ...prev[roleKey], [permKey]: newVal },
     }));
 
-    const { error } = await (supabase as any).from("role_permissions").upsert(
+    const { error } = await supabase.from("role_permissions").upsert(
       { role: roleKey, permission_key: permKey, is_granted: newVal },
       { onConflict: "role,permission_key" },
     );
@@ -156,7 +157,7 @@ export function SettingsPage() {
   };
 
   const handleSave = async () => {
-    const { error } = await (supabase as any).from("settings").upsert([
+    const { error } = await supabase.from("settings").upsert([
       { key: "org_name", value: { text: orgName } },
       { key: "work_start", value: { text: workStart } },
       { key: "work_end", value: { text: workEnd } },

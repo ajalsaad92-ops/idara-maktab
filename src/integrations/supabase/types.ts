@@ -52,6 +52,69 @@ export type Database = {
           },
         ]
       }
+      departments: {
+        Row: {
+          created_at: string | null
+          head_user_id: string | null
+          id: string
+          name_ar: string
+          name_en: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          head_user_id?: string | null
+          id?: string
+          name_ar: string
+          name_en?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          head_user_id?: string | null
+          id?: string
+          name_ar?: string
+          name_en?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      task_attachments: {
+        Row: {
+          created_at: string | null
+          file_name: string
+          file_path: string
+          file_size: number | null
+          file_type: string | null
+          id: string
+          mime_type: string | null
+          task_id: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string | null
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          mime_type?: string | null
+          task_id: string
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          mime_type?: string | null
+          task_id?: string
+          uploaded_by?: string
+        }
+        Relationships: []
+      }
       exit_requests: {
         Row: {
           attendance_event_id: string | null
@@ -216,22 +279,37 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           department: string | null
+          department_id: string | null
+          email: string | null
           full_name: string
           id: string
+          is_active: boolean | null
+          joined_date: string | null
+          phone: string | null
         }
         Insert: {
           avatar_url?: string | null
           created_at?: string
           department?: string | null
+          department_id?: string | null
+          email?: string | null
           full_name?: string
           id: string
+          is_active?: boolean | null
+          joined_date?: string | null
+          phone?: string | null
         }
         Update: {
           avatar_url?: string | null
           created_at?: string
           department?: string | null
+          department_id?: string | null
+          email?: string | null
           full_name?: string
           id?: string
+          is_active?: boolean | null
+          joined_date?: string | null
+          phone?: string | null
         }
         Relationships: []
       }
@@ -260,17 +338,17 @@ export type Database = {
         Row: {
           key: string
           updated_at: string | null
-          value: Json
+          value: { text?: string; number?: number; task_assigned?: boolean; task_commented?: boolean; check_in_reminder?: boolean } | Json
         }
         Insert: {
           key: string
           updated_at?: string | null
-          value: Json
+          value: { text?: string; number?: number; task_assigned?: boolean; task_commented?: boolean; check_in_reminder?: boolean } | Json
         }
         Update: {
           key?: string
           updated_at?: string | null
-          value?: Json
+          value?: { text?: string; number?: number; task_assigned?: boolean; task_commented?: boolean; check_in_reminder?: boolean } | Json
         }
         Relationships: []
       }

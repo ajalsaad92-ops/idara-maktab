@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
+import { todayBaghdad } from "@/lib/format";
 
 type Attendance = Tables<"attendance">;
 
@@ -17,13 +18,16 @@ export function useTodayAttendance(userId: string | undefined) {
     queryKey: attendanceKeys.today(userId ?? ""),
     queryFn: async () => {
       if (!userId) return [];
-      const dayStart = new Date();
-      dayStart.setHours(0, 0, 0, 0);
+      // Use Baghdad timezone for date boundary to match database event_date
+      const todayStr = todayBaghdad();
+      const dayStart = `${todayStr}T00:00:00+03:00`;
+      const dayEnd = `${todayStr}T23:59:59+03:00`;
       const { data, error } = await supabase
         .from("attendance")
         .select("*")
         .eq("user_id", userId)
-        .gte("event_at", dayStart.toISOString())
+        .gte("event_at", dayStart)
+        .lte("event_at", dayEnd)
         .order("event_at", { ascending: true });
       if (error) throw error;
       return (data ?? []) as Attendance[];

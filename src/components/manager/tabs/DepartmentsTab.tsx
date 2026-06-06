@@ -20,8 +20,8 @@ export default function DepartmentsTab() {
 
   const { data: departments, isLoading } = useQuery({
     queryKey: ["departments"],
-    queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      queryFn: async () => {
+      const { data, error } = await supabase
         .from("departments")
         .select("*, profiles:head_user_id(full_name)")
         .order("created_at", { ascending: false });
@@ -46,7 +46,7 @@ export default function DepartmentsTab() {
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await (supabase as any).from("departments").insert({
+      const { error } = await supabase.from("departments").insert({
         name_ar: nameAr,
         name_en: nameEn || null,
       });
@@ -64,7 +64,7 @@ export default function DepartmentsTab() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase as any).from("departments").delete().eq("id", id);
+      const { error } = await supabase.from("departments").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {

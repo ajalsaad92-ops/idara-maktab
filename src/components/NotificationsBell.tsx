@@ -132,7 +132,9 @@ export function NotificationsBell() {
       setIsOpen(false);
       const linkData = notification.link_data as any;
       if (linkData?.route) {
-        const page = linkData.route.replace(/^\//, "") || undefined;
+        const rawPage = linkData.route.replace(/^\//, "");
+        // "/dashboard" or "/" is the default route (no page param needed)
+        const page = (rawPage && rawPage !== "dashboard") ? rawPage : undefined;
         navigate({
           to: "/",
           search: { page, task_id: linkData.task_id } as any,
