@@ -120,34 +120,20 @@ export function EmployeeManagementPage() {
     }
     setAdding(true);
     try {
-      // Create auth user via admin API
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: addForm.email,
-        password: addForm.password,
-        options: { data: { full_name: addForm.full_name, role: addForm.role } },
+      if (role !== "admin") {
+        throw new Error("Only admins can create employees");
+      }
+      const { createEmployee } = await import("@/lib/admin.functions");
+      await createEmployee({
+        data: {
+          full_name: addForm.full_name,
+          email: addForm.email,
+          password: addForm.password,
+          role: addForm.role as "admin" | "manager" | "employee",
+          department_id: addForm.department_id || null,
+          phone: addForm.phone || null,
+        },
       });
-      if (authError) throw authError;
-      const userId = authData.user?.id;
-      if (!userId) throw new Error("No user ID returned");
-
-      // Create profile
-      const { error: profileError } = await (supabase as any).from("profiles").insert({
-        id: userId,
-        full_name: addForm.full_name,
-        role: addForm.role,
-        department_id: addForm.department_id || null,
-        phone: addForm.phone || null,
-        is_active: true,
-        joined_date: new Date().toISOString().split("T")[0],
-      });
-      if (profileError) throw profileError;
-
-      // Assign role in user_roles
-      const { error: roleError } = await (supabase as any).from("user_roles").insert({
-        user_id: userId,
-        role: addForm.role,
-      });
-      if (roleError) throw roleError;
 
       toast.success(t("employee_added") || "تم إضافة الموظف بنجاح");
       setAddOpen(false);
