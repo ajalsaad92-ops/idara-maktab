@@ -24,7 +24,7 @@ export const prefetchManagerDashboard = async (queryClient: QueryClient) => {
       const { supabase } = await import("@/integrations/supabase/client");
       const [profRes, attRes, taskRes, assignRes] = await Promise.all([
         supabase.from("profiles").select("*"),
-        supabase.from("attendance").select("*").order("event_at", { ascending: false }).limit(500),
+        supabase.from("attendance").select("*").order("event_at", { ascending: false }).limit(2000),
         supabase.from("tasks").select("*").order("created_at", { ascending: false }),
         supabase.from("task_assignments").select("*").eq("is_active", true),
       ]);
@@ -49,7 +49,7 @@ export function ManagerDashboard() {
     queryFn: async () => {
       const [p, a, tk, ta] = await Promise.all([
         supabase.from("profiles").select("*"),
-        supabase.from("attendance").select("*").order("event_at", { ascending: false }).limit(500),
+        supabase.from("attendance").select("*").order("event_at", { ascending: false }).limit(2000),
         supabase.from("tasks").select("*").order("created_at", { ascending: false }),
         supabase.from("task_assignments").select("*").eq("is_active", true),
       ]);
@@ -69,6 +69,11 @@ export function ManagerDashboard() {
   const tasks = data?.tasks ?? [];
   const assignments = data?.assignments ?? [];
   const today = todayBaghdad();
+  // Calculate week ago date for "this week" filter
+  const todayDate = new Date(today + "T00:00:00");
+  const weekAgoDate = new Date(todayDate);
+  weekAgoDate.setDate(weekAgoDate.getDate() - 7);
+  const weekAgoStr = weekAgoDate.toISOString().split("T")[0];
 
   // Build per-user today status
   const todayEvents = attendance.filter((a: any) => a.event_date === today);
@@ -83,7 +88,14 @@ export function ManagerDashboard() {
       const start = new Date(cur.event_at).getTime();
       const end = next ? new Date(next.event_at).getTime() : now;
       const d = Math.max(0, end - start);
-      if (cur.event_type === "in") inMs += d; else outMs += d;
+      if (cur.event_type === "in") inMs += d; 
+      else if (cur.event_type === "out_final") {
+        // out_final means day ended - no more outside time accumulates
+        outMs += 0;
+      } else {
+        // out (exit request) - outside time until return or now
+        outMs += d;
+      }
     }
     const last = evs[evs.length - 1];
     statusByUser[p.id] = { status: last.event_type === "in" ? "in" : "out", lastAt: evs[0].event_at, outH: outMs / 3_600_000, inH: inMs / 3_600_000 };
@@ -96,7 +108,8 @@ export function ManagerDashboard() {
   const totalEmployees = profiles.length;
   const todayIn = Object.values(statusByUser).filter(s => s.status === "in").length;
   const activeTasks = tasks.filter((t: any) => t.status !== "completed" && t.status !== "archived").length;
-  const completedTasks = tasks.filter((t: any) => t.status === "completed").length;
+  // Completed tasks THIS WEEK (updated_at within last 7 days)
+  const completedTasksThisWeek = tasks.filter((t: any) => t.status === "completed" && t.updated_at && t.updated_at >= weekAgoStr).length;
 
   const pendingTasks = tasks.filter((t: any) =>
     t.status !== "completed" && t.status !== "archived"
@@ -159,7 +172,7 @@ export function ManagerDashboard() {
             <div className="p-1.5 sm:p-2.5 bg-success/10 rounded-xl"><Building2 className="w-4 h-4 sm:w-5 h-5 text-success" /></div>
             <div className="text-center sm:text-start min-w-0 w-full">
               <p className="text-[9px] sm:text-xs text-muted-foreground truncate">{t("completed_tasks")}</p>
-              <p className="text-sm sm:text-2xl font-bold"><CountUp end={completedTasks} duration={1.5} /></p>
+              <p className="text-sm sm:text-2xl font-bold"><CountUp end={completedTasksThisWeek} duration={1.5} /></p>
             </div>
           </div>
         </Card>
@@ -182,7 +195,7 @@ export function ManagerDashboard() {
               {dueTodayTasks.length > 0 && (
                 <span className="flex items-center gap-1 text-warning"><Clock className="h-4 w-4" />{dueTodayTasks.length} {t("due_today") || "تنتهي اليوم"}</span>
               )}
-              <span className="flex items-center gap-1 text-success"><CheckSquare className="h-4 w-4" />{completedTasks} {t("completed_this_week") || "مكتملة هذا الأسبوع"}</span>
+              <span className="flex items-center gap-1 text-success"><CheckSquare className="h-4 w-4" />{completedTasksThisWeek} {t("completed_this_week") || "مكتملة هذا الأسبوع"}</span>
             </div>
           </div>
           <Card className="overflow-x-auto">

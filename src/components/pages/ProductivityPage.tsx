@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
+import { todayBaghdad } from "@/lib/format";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useEmployeeDrawer } from "@/contexts/EmployeeDrawerContext";
@@ -64,6 +65,7 @@ function ProductivityPageComponent() {
   });
 
   const productivity = useMemo(() => {
+    const todayStr = todayBaghdad();
     return (profiles ?? []).map((p: any) => {
       const userAssigns = (assignments ?? []).filter((a: any) => a.user_id === p.id);
       const userTasks = userAssigns
@@ -74,9 +76,9 @@ function ProductivityPageComponent() {
       const inProgress = userTasks.filter((tk: any) => tk.status === "in_progress").length;
       const newTasks = userTasks.filter((tk: any) => tk.status === "new").length;
 
-      // Calculate hours from attendance
+      // Calculate TODAY's hours from attendance (not 14-day sum)
       const userAttendance = (attendance ?? [])
-        .filter((a: any) => a.user_id === p.id)
+        .filter((a: any) => a.user_id === p.id && a.event_date === todayStr)
         .sort((a: any, b: any) => new Date(a.event_at).getTime() - new Date(b.event_at).getTime());
 
       let hoursIn = 0;
@@ -142,12 +144,18 @@ function ProductivityPageComponent() {
     [t("new_tasks_label") || "جديدة"]: p.newTasks,
   }));
 
-  // Line chart data: daily attendance hours (last 14 days)
+  // Line chart data: daily attendance hours (last 14 days) - using Baghdad timezone
   const lineData = useMemo(() => {
     const days: any[] = [];
     for (let d = 13; d >= 0; d--) {
       const date = new Date(Date.now() - d * 86400000);
-      const dateStr = date.toISOString().split("T")[0];
+      // Use Baghdad timezone for date string to match database event_date
+      const dateStr = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Baghdad",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(date);
       const dayLabel = date.toLocaleDateString(lang === "ar" ? "ar-IQ" : "en-US", { weekday: "short", day: "numeric" });
       const dayEntry: any = { date: dayLabel };
       // Show top 5 employees

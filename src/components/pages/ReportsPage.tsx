@@ -2,6 +2,7 @@ import { memo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useI18n } from "@/lib/i18n";
+import { todayBaghdad } from "@/lib/format";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -44,7 +45,7 @@ function ReportsPageComponent() {
     totalEmployees: (profiles ?? []).length,
     totalTasks: (tasks ?? []).length,
     completedTasks: (tasks ?? []).filter((t: any) => t.status === "completed").length,
-    todayAttendance: (attendance ?? []).filter((a: any) => a.event_date === new Date().toISOString().split("T")[0]).length,
+    todayAttendance: (attendance ?? []).filter((a: any) => a.event_date === todayBaghdad()).length,
   };
 
   const handlePrint = () => {

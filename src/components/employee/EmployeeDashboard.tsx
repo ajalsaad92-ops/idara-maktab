@@ -180,14 +180,14 @@ export function EmployeeDashboard() {
     staleTime: 15_000,
   });
 
-  // 4. Main data: today attendance + active tasks
+  // 4. Main data: today attendance + active tasks + completed tasks count
   const { data, isLoading } = useQuery({
     queryKey: ["employeeDashboard", user?.id],
     queryFn: async () => {
-      if (!user) return { today: [], tasks: [] };
+      if (!user) return { today: [], tasks: [], completedToday: 0 };
       const todayStr = baghdadToday();
 
-      const [att, tks] = await Promise.all([
+      const [att, tks, completedTks] = await Promise.all([
         supabase
           .from("attendance")
           .select("*")
@@ -197,6 +197,11 @@ export function EmployeeDashboard() {
         supabase
           .from("task_assignments")
           .select("task_id, is_active, tasks(id, title, type, status, priority, deadline, description, created_at)")
+          .eq("user_id", user.id)
+          .eq("is_active", true),
+        supabase
+          .from("task_assignments")
+          .select("task_id, tasks!inner(id, status, updated_at)")
           .eq("user_id", user.id)
           .eq("is_active", true),
       ]);
@@ -219,7 +224,16 @@ export function EmployeeDashboard() {
         activeTasks = directTasks ?? [];
       }
 
-      return { today: att.data ?? [], tasks: activeTasks };
+      // Count completed tasks for today (updated_at date matches today)
+      let completedToday = 0;
+      if (!completedTks.error && completedTks.data) {
+        completedToday = completedTks.data.filter((a: any) => 
+          a.tasks?.status === "completed" && 
+          a.tasks?.updated_at?.startsWith(todayStr)
+        ).length;
+      }
+
+      return { today: att.data ?? [], tasks: activeTasks, completedToday };
     },
     enabled: !!user,
   });
@@ -498,7 +512,7 @@ export function EmployeeDashboard() {
   // 2h reminder (only when in EXIT_APPROVED state)
   const showReminder = attState === "EXIT_APPROVED" && hours.outH > 2;
 
-  const completedToday = tasks.filter((tk: any) => tk.status === "completed").length;
+  const completedToday = data?.completedToday ?? 0;
   const pendingCount = tasks.filter((tk: any) => {
     const s = tk.status;
     return s !== "completed" && s !== "archived";

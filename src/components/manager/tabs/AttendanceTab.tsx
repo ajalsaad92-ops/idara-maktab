@@ -66,8 +66,8 @@ function AttendanceTab({ attendance, profiles, profilesMap, exportAttendance }: 
                   <TableRow key={a.id} onClick={() => openEmployeeDrawer(a.user_id)} className="cursor-pointer transition-colors">
                     <TableCell>{profilesMap[a.user_id]?.full_name ?? "—"}</TableCell>
                     <TableCell>
-                      <Badge variant={a.event_type === "in" ? "default" : "destructive"}>
-                        {a.event_type === "in" ? t("check_in") : t("check_out")}
+                      <Badge variant={a.event_type === "in" ? "default" : a.event_type === "out_final" ? "destructive" : "destructive"}>
+                        {a.event_type === "in" ? t("check_in") : a.event_type === "out_final" ? t("day_end") : t("check_out")}
                       </Badge>
                     </TableCell>
                     <TableCell>{a.reason ?? "—"}</TableCell>
@@ -90,8 +90,8 @@ function AttendanceTab({ attendance, profiles, profilesMap, exportAttendance }: 
               <MobileCard key={a.id} onClick={() => openEmployeeDrawer(a.user_id)}>
                 <MobileCardRow label={t("name")} value={profilesMap[a.user_id]?.full_name ?? "—"} />
                 <MobileCardRow label={t("type")} value={
-                  <Badge variant={a.event_type === "in" ? "default" : "destructive"}>
-                    {a.event_type === "in" ? t("check_in") : t("check_out")}
+                  <Badge variant={a.event_type === "in" ? "default" : a.event_type === "out_final" ? "destructive" : "destructive"}>
+                    {a.event_type === "in" ? t("check_in") : a.event_type === "out_final" ? t("day_end") : t("check_out")}
                   </Badge>
                 } />
                 <MobileCardRow label={t("reason")} value={a.reason ?? "—"} />

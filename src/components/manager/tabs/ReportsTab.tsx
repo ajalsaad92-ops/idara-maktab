@@ -6,8 +6,9 @@ import { Printer } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { TeamReportDownload } from "@/components/reports/ReportDownload";
 
-function ReportsTab({ productivity }: any) {
+function ReportsTab({ productivity, departments }: any) {
   const { t } = useI18n();
+  const deptMap = Object.fromEntries((departments ?? []).map((d: any) => [d.id, d.name_ar || d.name_en]));
   return (
     <Card className="p-6 print:shadow-none">
       <div className="flex justify-between items-center mb-4">
@@ -16,7 +17,7 @@ function ReportsTab({ productivity }: any) {
           <TeamReportDownload
             employees={productivity.map((r: any) => ({
               full_name: r.profile.full_name,
-              department: r.profile.department ?? "—",
+              department: r.profile.department_id ? deptMap[r.profile.department_id] ?? "—" : "—",
               completedTasks: r.completed,
               totalHours: r.inH,
               score: r.score,
@@ -45,7 +46,7 @@ function ReportsTab({ productivity }: any) {
           {productivity.map((r: any) => (
             <TableRow key={r.profile.id}>
               <TableCell>{r.profile.full_name}</TableCell>
-              <TableCell>{r.profile.department ?? "—"}</TableCell>
+              <TableCell>{r.profile.department_id ? deptMap[r.profile.department_id] ?? "—" : "—"}</TableCell>
               <TableCell>{r.total}</TableCell>
               <TableCell>{r.completed}</TableCell>
               <TableCell>{r.score}%</TableCell>

@@ -151,7 +151,7 @@ export function AttendancePage() {
         }
       }
       if (evType === "in" && i > 0) {
-        const prevOut = events.slice(0, i).reverse().find((e) => (e.event_type as string) === "out");
+        const prevOut = events.slice(0, i).reverse().find((e) => (e.event_type as string) === "out" || (e.event_type as string) === "out_final");
         if (prevOut) {
           const diff = (new Date(ev.event_at).getTime() - new Date(prevOut.event_at).getTime()) / 3600000;
           outside += diff;
